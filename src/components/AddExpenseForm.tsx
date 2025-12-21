@@ -37,6 +37,7 @@ import { Separator } from './ui/separator';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { SimpleCategoryForm } from '@/components/SimpleCategoryForm';
+import { AddPersonnelForm } from '@/components/AddPersonnelForm';
 const taxSchema = z.object({
   name: z.string().min(1, { message: 'Tax name is required.' }),
   rate: z.number().min(0, { message: 'Rate must be non-negative.' }).max(100, { message: 'Rate cannot exceed 100.' }),
@@ -62,6 +63,7 @@ export function AddExpenseForm({ onSubmit, onFinished }: AddExpenseFormProps) {
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewCategoryOpen, setIsNewCategoryOpen] = useState(false);
+  const [isNewPersonnelOpen, setIsNewPersonnelOpen] = useState(false);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -128,6 +130,20 @@ export function AddExpenseForm({ onSubmit, onFinished }: AddExpenseFormProps) {
       toast.error(err instanceof Error ? err.message : 'Failed to create category.');
     }
   };
+  const handleCreatePersonnel = async (values: Omit<Personnel, 'id' | 'associatedExpenseIds'>) => {
+    try {
+      const newPersonnel = await api<Personnel>('/api/personnel', {
+        method: 'POST',
+        body: JSON.stringify(values),
+      });
+      setPersonnel(prev => [...prev, newPersonnel]);
+      form.setValue('personnelId', newPersonnel.id);
+      setIsNewPersonnelOpen(false);
+      toast.success('Personnel created and selected!');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create personnel.');
+    }
+  };
   return (
     <>
       <Form {...form}>
@@ -153,9 +169,9 @@ export function AddExpenseForm({ onSubmit, onFinished }: AddExpenseFormProps) {
                   </FormItem>
                 )}
               />
-              <FormField 
-                control={form.control} 
-                name="category" 
+              <FormField
+                control={form.control}
+                name="category"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
@@ -172,10 +188,10 @@ export function AddExpenseForm({ onSubmit, onFinished }: AddExpenseFormProps) {
                           ))}
                         </SelectContent>
                       </Select>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="icon" 
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
                         onClick={() => setIsNewCategoryOpen(true)}
                         title="Add New Category"
                       >
@@ -184,7 +200,7 @@ export function AddExpenseForm({ onSubmit, onFinished }: AddExpenseFormProps) {
                     </div>
                     <FormMessage />
                   </FormItem>
-                )} 
+                )}
               />
           </div>
           {category === 'Materials' && (
@@ -226,7 +242,39 @@ export function AddExpenseForm({ onSubmit, onFinished }: AddExpenseFormProps) {
             </>
           )}
           <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date of Expense</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('w-full pl-3 text-left font-normal',!field.value && 'text-muted-foreground')}>{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date('1900-01-01')} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
-          <FormField control={form.control} name="personnelId" render={({ field }) => (<FormItem><FormLabel>Associate with Personnel (Optional)</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}><FormControl><SelectTrigger><SelectValue placeholder={isLoading ? "Loading..." : "Select personnel"} /></SelectTrigger></FormControl><SelectContent>{personnel.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+          <FormField
+            control={form.control}
+            name="personnelId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Associate with Personnel (Optional)</FormLabel>
+                <div className="flex gap-2">
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                    <FormControl>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder={isLoading ? "Loading..." : "Select personnel"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {personnel.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsNewPersonnelOpen(true)}
+                    title="Add New Personnel"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <Separator />
           <div>
             <h3 className="text-sm font-medium mb-2">Taxes (Optional)</h3>
@@ -271,11 +319,23 @@ export function AddExpenseForm({ onSubmit, onFinished }: AddExpenseFormProps) {
             <DialogTitle>Add Expense Category</DialogTitle>
             <DialogDescription>Create a new category for organizing expenses.</DialogDescription>
           </DialogHeader>
-          <SimpleCategoryForm 
-            onSubmit={handleCreateCategory} 
-            onCancel={() => setIsNewCategoryOpen(false)} 
+          <SimpleCategoryForm
+            onSubmit={handleCreateCategory}
+            onCancel={() => setIsNewCategoryOpen(false)}
             label="Category Name"
             placeholder="e.g., Travel, Equipment"
+          />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isNewPersonnelOpen} onOpenChange={setIsNewPersonnelOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Personnel</DialogTitle>
+            <DialogDescription>Create a new personnel record instantly.</DialogDescription>
+          </DialogHeader>
+          <AddPersonnelForm
+            onSubmit={handleCreatePersonnel}
+            onFinished={() => {}} // Dialog closes via state in handleCreatePersonnel
           />
         </DialogContent>
       </Dialog>
