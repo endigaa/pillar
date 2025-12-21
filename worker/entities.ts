@@ -1,7 +1,7 @@
 import { IndexedEntity, Entity } from "./core-utils";
 import type { Env } from "./core-utils";
-import type { Client, Project, Expense, Deposit, ProgressPhoto, Tool, SubContractor, Supplier, Material, Task, TaskStatus, ClientDocument, CompanyProfile, Invoice, SupplierCategory, ConstructionStage, ExpenseCategory, WorkshopMaterial, WorksiteMaterialIssue, Personnel, DayOff, GeneralExpense, NextOfKin, Quote, JournalEntry, ClientFeedback, ChangeOrder, PlanStage, Workshop } from "@shared/types";
-import { MOCK_CLIENTS, MOCK_PROJECTS, MOCK_SUPPLIER_CATEGORIES, MOCK_CONSTRUCTION_STAGES, MOCK_EXPENSE_CATEGORIES, MOCK_WORKSHOP_MATERIALS, MOCK_PERSONNEL, MOCK_GENERAL_EXPENSES, MOCK_WORKSHOPS, MOCK_PROJECT_TEMPLATES } from "@shared/mock-data";
+import type { Client, Project, Expense, Deposit, ProgressPhoto, Tool, SubContractor, Supplier, Material, Task, TaskStatus, ClientDocument, CompanyProfile, Invoice, SupplierCategory, ConstructionStage, ExpenseCategory, WorkshopMaterial, WorksiteMaterialIssue, Personnel, DayOff, GeneralExpense, NextOfKin, Quote, JournalEntry, ClientFeedback, ChangeOrder, PlanStage, Workshop, GeneralIncome } from "@shared/types";
+import { MOCK_CLIENTS, MOCK_PROJECTS, MOCK_SUPPLIER_CATEGORIES, MOCK_CONSTRUCTION_STAGES, MOCK_EXPENSE_CATEGORIES, MOCK_WORKSHOP_MATERIALS, MOCK_PERSONNEL, MOCK_GENERAL_EXPENSES, MOCK_WORKSHOPS, MOCK_PROJECT_TEMPLATES, MOCK_GENERAL_INCOME } from "@shared/mock-data";
 import type { ProjectTemplate } from "@shared/types";
 // COMPANY PROFILE ENTITY (Singleton)
 export class CompanyProfileEntity extends Entity<CompanyProfile> {
@@ -503,6 +503,19 @@ export class GeneralExpenseEntity extends IndexedEntity<GeneralExpense> {
     category: "",
   };
   static seedData = MOCK_GENERAL_EXPENSES;
+}
+// GENERAL INCOME ENTITY
+export class GeneralIncomeEntity extends IndexedEntity<GeneralIncome> {
+  static readonly entityName = "generalIncome";
+  static readonly indexName = "generalIncomes";
+  static readonly initialState: GeneralIncome = {
+    id: "",
+    description: "",
+    amount: 0,
+    date: "",
+    category: "",
+  };
+  static seedData = MOCK_GENERAL_INCOME;
 }
 // QUOTE ENTITY
 export class QuoteEntity extends IndexedEntity<Quote> {

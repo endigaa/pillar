@@ -29,6 +29,13 @@ export interface GeneralExpense {
   date: string; // ISO 8601
   category: string;
 }
+export interface GeneralIncome {
+  id: string;
+  description: string;
+  amount: number; // in cents
+  date: string; // ISO 8601
+  category: string;
+}
 export interface Client {
   id: string;
   name: string;
@@ -186,7 +193,7 @@ export interface CustomProperty {
   type: 'text' | 'date' | 'number';
 }
 export type ToolCategory = 'Power Tool' | 'Hand Tool' | 'Vehicle' | 'Safety Equipment' | 'Miscellaneous';
-export type ToolStatus = 'Available' | 'In Use' | 'Under Maintenance';
+export type ToolStatus = 'Available' | 'In Use' | 'Under Maintenance' | 'Retired';
 export type LocationType = 'Workshop' | 'Project' | 'Other';
 export interface Tool {
   id: string;

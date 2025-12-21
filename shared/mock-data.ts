@@ -1,4 +1,4 @@
-import type { Client, Project, Expense, SupplierCategory, ConstructionStage, ExpenseCategory, WorkshopMaterial, Personnel, GeneralExpense, Workshop, ProjectTemplate } from './types';
+import type { Client, Project, Expense, SupplierCategory, ConstructionStage, ExpenseCategory, WorkshopMaterial, Personnel, GeneralExpense, Workshop, ProjectTemplate, GeneralIncome } from './types';
 export const MOCK_CLIENTS: Client[] = [
   { id: 'client-1', name: 'John Doe', email: 'john.doe@example.com', phone: '555-1234', notes: 'Long-time client, prefers morning updates.' },
   { id: 'client-2', name: 'Jane Smith', email: 'jane.smith@example.com', phone: '555-5678', notes: 'New client, referred by Apex Electricians.' },
@@ -144,6 +144,10 @@ export const MOCK_PERSONNEL: Personnel[] = [
 export const MOCK_GENERAL_EXPENSES: GeneralExpense[] = [
     { id: 'gen-exp-1', description: 'QuickBooks Subscription', amount: 5000, date: '2025-07-01T00:00:00Z', category: 'Accounting' },
     { id: 'gen-exp-2', description: 'Office Printer Paper', amount: 2500, date: '2025-07-15T00:00:00Z', category: 'Office Supplies' },
+];
+export const MOCK_GENERAL_INCOME: GeneralIncome[] = [
+    { id: 'gen-inc-1', description: 'Sale of old truck', amount: 500000, date: '2025-06-15T00:00:00Z', category: 'Asset Sale' },
+    { id: 'gen-inc-2', description: 'Consulting fee', amount: 150000, date: '2025-07-20T00:00:00Z', category: 'Consulting' },
 ];
 export const MOCK_PROJECT_TEMPLATES: ProjectTemplate[] = [
   {

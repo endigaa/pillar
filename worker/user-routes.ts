@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import type { Env } from './core-utils';
-import { ProjectEntity, ClientEntity, ToolEntity, SubContractorEntity, SupplierEntity, MaterialEntity, CompanyProfileEntity, InvoiceEntity, SupplierCategoryEntity, ConstructionStageEntity, ExpenseCategoryEntity, WorkshopMaterialEntity, PersonnelEntity, GeneralExpenseEntity, QuoteEntity, ChangeOrderEntity, WorkshopEntity, ProjectTemplateEntity } from "./entities";
+import { ProjectEntity, ClientEntity, ToolEntity, SubContractorEntity, SupplierEntity, MaterialEntity, CompanyProfileEntity, InvoiceEntity, SupplierCategoryEntity, ConstructionStageEntity, ExpenseCategoryEntity, WorkshopMaterialEntity, PersonnelEntity, GeneralExpenseEntity, QuoteEntity, ChangeOrderEntity, WorkshopEntity, ProjectTemplateEntity, GeneralIncomeEntity } from "./entities";
 import { createModel, createSingletonModel } from "./orm";
 import { ok, bad, notFound, isStr } from './core-utils';
-import type { Project, Expense, Client, Deposit, ProgressPhoto, Tool, SubContractor, Supplier, Material, Task, TaskStatus, ClientDocument, CompanyProfile, ImportedTransaction, Invoice, InvoiceStatus, ClientStatement, ClientStatementTransaction, ExpenseCategory, SupplierCategory, ConstructionStage, WorkshopMaterial, Personnel, DayOff, GeneralExpense, Quote, QuoteStatus, JournalEntry, ClientFeedback, ChangeOrder, ChangeOrderStatus, PlanStage, Workshop, PortalResources, WorksiteMaterialIssue, ProjectTemplate } from "@shared/types";
+import type { Project, Expense, Client, Deposit, ProgressPhoto, Tool, SubContractor, Supplier, Material, Task, TaskStatus, ClientDocument, CompanyProfile, ImportedTransaction, Invoice, InvoiceStatus, ClientStatement, ClientStatementTransaction, ExpenseCategory, SupplierCategory, ConstructionStage, WorkshopMaterial, Personnel, DayOff, GeneralExpense, Quote, QuoteStatus, JournalEntry, ClientFeedback, ChangeOrder, ChangeOrderStatus, PlanStage, Workshop, PortalResources, WorksiteMaterialIssue, ProjectTemplate, GeneralIncome } from "@shared/types";
 import { MOCK_PROJECT_TEMPLATES } from "@shared/mock-data";
 // Create models from entities
 const CompanyProfileModel = createSingletonModel(CompanyProfileEntity);
@@ -20,6 +20,7 @@ const ExpenseCategoryModel = createModel<ExpenseCategory, ExpenseCategoryEntity>
 const WorkshopMaterialModel = createModel<WorkshopMaterial, WorkshopMaterialEntity>(WorkshopMaterialEntity);
 const PersonnelModel = createModel<Personnel, PersonnelEntity>(PersonnelEntity);
 const GeneralExpenseModel = createModel<GeneralExpense, GeneralExpenseEntity>(GeneralExpenseEntity);
+const GeneralIncomeModel = createModel<GeneralIncome, GeneralIncomeEntity>(GeneralIncomeEntity);
 const QuoteModel = createModel<Quote, QuoteEntity>(QuoteEntity);
 const ChangeOrderModel = createModel<ChangeOrder, ChangeOrderEntity>(ChangeOrderEntity);
 const WorkshopModel = createModel<Workshop, WorkshopEntity>(WorkshopEntity);
@@ -41,6 +42,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await WorkshopMaterialModel.ensureSeed(c.env);
     await PersonnelModel.ensureSeed(c.env);
     await GeneralExpenseModel.ensureSeed(c.env);
+    await GeneralIncomeModel.ensureSeed(c.env);
     await QuoteModel.ensureSeed(c.env);
     await ChangeOrderModel.ensureSeed(c.env);
     await InvoiceModel.ensureSeed(c.env);
@@ -1128,6 +1130,51 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const newExpense: GeneralExpense = { ...expenseData, id: crypto.randomUUID() };
     const created = await GeneralExpenseModel.create(c.env, newExpense);
     return ok(c, created);
+  });
+  // GENERAL INCOME
+  app.get('/api/general-income', async (c) => {
+    const income = await GeneralIncomeModel.all(c.env);
+    return ok(c, income);
+  });
+  app.post('/api/general-income', async (c) => {
+    const incomeData = await c.req.json<Omit<GeneralIncome, 'id'>>();
+    if (!isStr(incomeData.description) || typeof incomeData.amount !== 'number' || !isStr(incomeData.date) || !isStr(incomeData.category)) {
+      return bad(c, 'description, amount, date, and category are required');
+    }
+    const newIncome: GeneralIncome = { ...incomeData, id: crypto.randomUUID() };
+    const created = await GeneralIncomeModel.create(c.env, newIncome);
+    return ok(c, created);
+  });
+  // RETURN MATERIAL
+  app.post('/api/projects/:id/return-material', async (c) => {
+    const { id } = c.req.param();
+    const { worksiteMaterialId, quantity } = await c.req.json<{ worksiteMaterialId: string; quantity: number }>();
+    if (!isStr(worksiteMaterialId) || typeof quantity !== 'number' || quantity <= 0) {
+      return bad(c, 'Valid worksiteMaterialId and positive quantity required');
+    }
+    const project = await ProjectModel.findInstance(c.env, id);
+    if (!project) return notFound(c, 'Project not found');
+    const projectState = await project.getState();
+    const issue = projectState.worksiteMaterials?.find(m => m.id === worksiteMaterialId);
+    if (!issue) return notFound(c, 'Material issue record not found in project');
+    if (issue.quantity < quantity) return bad(c, 'Cannot return more than issued quantity');
+    const workshopMaterial = await WorkshopMaterialModel.findInstance(c.env, issue.workshopMaterialId);
+    if (!workshopMaterial) return notFound(c, 'Original workshop material not found');
+    // 1. Update Workshop Material (Increment)
+    await workshopMaterial.mutate(s => ({
+        ...s,
+        quantity: s.quantity + quantity
+    }));
+    // 2. Update Project Issue (Decrement)
+    await project.mutate(s => ({
+        ...s,
+        worksiteMaterials: s.worksiteMaterials.map(m =>
+            m.id === worksiteMaterialId
+                ? { ...m, quantity: m.quantity - quantity }
+                : m
+        )
+    }));
+    return ok(c, { success: true });
   });
   // QUOTES
   app.get('/api/projects/:id/quotes', async (c) => {
