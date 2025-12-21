@@ -4,15 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { PlusCircle, MapPin } from 'lucide-react';
+import { PlusCircle, MapPin, Pencil } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { SubContractor } from '@shared/types';
 import { AddSubContractorForm } from './AddSubContractorForm';
+import { EditSubContractorForm } from './EditSubContractorForm';
 import { Toaster, toast } from '@/components/ui/sonner';
 export function SubContractors() {
   const [subContractors, setSubContractors] = useState<SubContractor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewSubContractorOpen, setNewSubContractorOpen] = useState(false);
+  const [editingSubContractor, setEditingSubContractor] = useState<SubContractor | null>(null);
   const fetchSubContractors = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -37,6 +39,20 @@ export function SubContractors() {
       fetchSubContractors();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add sub-contractor.');
+    }
+  };
+  const handleUpdateSubContractor = async (values: Partial<SubContractor>) => {
+    if (!editingSubContractor) return;
+    try {
+      await api(`/api/subcontractors/${editingSubContractor.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(values),
+      });
+      toast.success('Sub-contractor updated successfully!');
+      setEditingSubContractor(null);
+      fetchSubContractors();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update sub-contractor.');
     }
   };
   return (
@@ -72,6 +88,7 @@ export function SubContractors() {
                 <TableHead>Location</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -83,6 +100,7 @@ export function SubContractors() {
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : subContractors.length > 0 ? (
@@ -102,11 +120,16 @@ export function SubContractors() {
                     </TableCell>
                     <TableCell>{sc.email}</TableCell>
                     <TableCell>{sc.phone}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => setEditingSubContractor(sc)}>
+                        <Pencil className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">
+                  <TableCell colSpan={6} className="text-center h-24">
                     No sub-contractors found.
                   </TableCell>
                 </TableRow>
@@ -115,6 +138,21 @@ export function SubContractors() {
           </Table>
         </CardContent>
       </Card>
+      <Dialog open={!!editingSubContractor} onOpenChange={(open) => !open && setEditingSubContractor(null)}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Edit Sub-contractor</DialogTitle>
+            <DialogDescription>Update the sub-contractor's details.</DialogDescription>
+          </DialogHeader>
+          {editingSubContractor && (
+            <EditSubContractorForm
+              initialValues={editingSubContractor}
+              onSubmit={handleUpdateSubContractor}
+              onFinished={() => setEditingSubContractor(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       <Toaster richColors />
     </>
   );

@@ -614,6 +614,14 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const created = await SubContractorModel.create(c.env, newSc);
     return ok(c, created);
   });
+  app.put('/api/subcontractors/:id', async (c) => {
+    const { id } = c.req.param();
+    const updates = await c.req.json<Partial<SubContractor>>();
+    const sc = await SubContractorModel.findInstance(c.env, id);
+    if (!sc) return notFound(c, 'Sub-contractor not found');
+    await sc.patch(updates);
+    return ok(c, await sc.getState());
+  });
   // SUPPLIERS
   app.get('/api/suppliers', async (c) => {
     const suppliers = await SupplierModel.all(c.env);
