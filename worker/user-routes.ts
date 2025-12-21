@@ -462,6 +462,14 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const created = await ClientModel.create(c.env, newClient);
     return ok(c, created);
   });
+  app.put('/api/clients/:id', async (c) => {
+    const { id } = c.req.param();
+    const updates = await c.req.json<Partial<Client>>();
+    const client = await ClientModel.findInstance(c.env, id);
+    if (!client) return notFound(c, 'Client not found');
+    await client.patch(updates);
+    return ok(c, await client.getState());
+  });
   // CLIENT STATEMENT
   app.get('/api/clients/:id/statement', async (c) => {
     const { id } = c.req.param();
@@ -639,6 +647,14 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     };
     const created = await SupplierModel.create(c.env, newSupplier);
     return ok(c, created);
+  });
+  app.put('/api/suppliers/:id', async (c) => {
+    const { id } = c.req.param();
+    const updates = await c.req.json<Partial<Supplier>>();
+    const supplier = await SupplierModel.findInstance(c.env, id);
+    if (!supplier) return notFound(c, 'Supplier not found');
+    await supplier.patch(updates);
+    return ok(c, await supplier.getState());
   });
   // DYNAMIC CATEGORIES
   app.get('/api/supplier-categories', async (c) => {
