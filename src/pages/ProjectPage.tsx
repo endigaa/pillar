@@ -8,11 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Share2, Copy, FileText, ExternalLink, MapPin, Calculator } from 'lucide-react';
+import { PlusCircle, Share2, Copy, FileText, ExternalLink, MapPin, Calculator, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { AddExpenseForm } from '@/components/AddExpenseForm';
+import { EditExpenseForm } from '@/components/EditExpenseForm';
 import { ProjectDeposits } from '@/components/ProjectDeposits';
 import { ProjectPhotos } from '@/components/ProjectPhotos';
 import { ProjectTasks } from '@/components/ProjectTasks';
@@ -43,6 +44,7 @@ export function ProjectPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddExpenseOpen, setAddExpenseOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isQuickQuoteOpen, setQuickQuoteOpen] = useState(false);
   const [isCreateInvoiceOpen, setCreateInvoiceOpen] = useState(false);
   const [isEditProjectOpen, setEditProjectOpen] = useState(false);
@@ -78,6 +80,20 @@ export function ProjectPage() {
       fetchProjectData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add expense.');
+    }
+  };
+  const handleUpdateExpense = async (values: Omit<Expense, 'id'>) => {
+    if (!id || !editingExpense) return;
+    try {
+      await api(`/api/projects/${id}/expenses/${editingExpense.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(values),
+      });
+      toast.success('Expense updated successfully!');
+      setEditingExpense(null);
+      fetchProjectData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update expense.');
     }
   };
   const handleAddDeposit = async (values: Omit<Deposit, 'id'>) => {
@@ -295,7 +311,34 @@ export function ProjectPage() {
                       <Dialog open={isAddExpenseOpen} onOpenChange={setAddExpenseOpen}><DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" />Add Expense</Button></DialogTrigger><DialogContent className="sm:max-w-[480px]"><DialogHeader><DialogTitle>Add New Expense</DialogTitle><DialogDescription>Log a new cost against the project budget.</DialogDescription></DialogHeader><AddExpenseForm onSubmit={handleAddExpense} onFinished={() => setAddExpenseOpen(false)} /></DialogContent></Dialog>
                     </CardHeader>
                     <CardContent>
-                      <TooltipProvider><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Category</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader><TableBody>{(project.expenses || []).length > 0 ? ((project.expenses || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((expense: Expense) => (<TableRow key={expense.id}><TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell><TableCell><div>{expense.description}{expense.category === 'Materials' && expense.workStage && (<Badge variant="outline" className="ml-2">{expense.workStage}</Badge>)}</div></TableCell><TableCell><Badge variant="secondary">{expense.category}</Badge></TableCell><TableCell className="text-right font-medium"><Tooltip><TooltipTrigger asChild><span>{formatCurrency(calculateTotalExpense(expense))}</span></TooltipTrigger><TooltipContent><div className="p-1 text-sm"><div className="flex justify-between gap-4"><span>Subtotal:</span><span>{formatCurrency(expense.amount)}</span></div>{(expense.taxes ?? []).map(tax => (<div key={tax.id} className="flex justify-between gap-4"><span>{tax.name} ({tax.rate}%):</span><span>{formatCurrency(expense.amount * (tax.rate / 100))}</span></div>))}</div></TooltipContent></Tooltip></TableCell></TableRow>))) : (<TableRow><TableCell colSpan={4} className="text-center h-24">No expenses logged yet.</TableCell></TableRow>)}</TableBody></Table></TooltipProvider>
+                      <TooltipProvider>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead className="text-right">Amount</TableHead>
+                              <TableHead className="w-[50px]"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(project.expenses || []).length > 0 ? ((project.expenses || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((expense: Expense) => (
+                              <TableRow key={expense.id}>
+                                <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                                <TableCell><div>{expense.description}{expense.category === 'Materials' && expense.workStage && (<Badge variant="outline" className="ml-2">{expense.workStage}</Badge>)}</div></TableCell>
+                                <TableCell><Badge variant="secondary">{expense.category}</Badge></TableCell>
+                                <TableCell className="text-right font-medium"><Tooltip><TooltipTrigger asChild><span>{formatCurrency(calculateTotalExpense(expense))}</span></TooltipTrigger><TooltipContent><div className="p-1 text-sm"><div className="flex justify-between gap-4"><span>Subtotal:</span><span>{formatCurrency(expense.amount)}</span></div>{(expense.taxes ?? []).map(tax => (<div key={tax.id} className="flex justify-between gap-4"><span>{tax.name} ({tax.rate}%):</span><span>{formatCurrency(expense.amount * (tax.rate / 100))}</span></div>))}</div></TooltipContent></Tooltip></TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="icon" onClick={() => setEditingExpense(expense)}>
+                                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))) : (<TableRow><TableCell colSpan={5} className="text-center h-24">No expenses logged yet.</TableCell></TableRow>)}
+                          </TableBody>
+                        </Table>
+                      </TooltipProvider>
                     </CardContent>
                   </Card>
                   <Card>
@@ -356,6 +399,21 @@ export function ProjectPage() {
           </TabsContent>
         </Tabs>
       </div>
+      <Dialog open={!!editingExpense} onOpenChange={(open) => !open && setEditingExpense(null)}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Edit Expense</DialogTitle>
+            <DialogDescription>Modify the details of this expense.</DialogDescription>
+          </DialogHeader>
+          {editingExpense && (
+            <EditExpenseForm
+              initialValues={editingExpense}
+              onSubmit={handleUpdateExpense}
+              onFinished={() => setEditingExpense(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       <Toaster richColors />
     </AppLayout>
   );
