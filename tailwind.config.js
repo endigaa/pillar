@@ -6,6 +6,7 @@ export default {
   	extend: {
   		fontFamily: {
   			sans: [
+          'DM Sans',
   				'Inter',
   				'-apple-system',
   				'BlinkMacSystemFont',
@@ -91,6 +92,9 @@ export default {
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		colors: {
+        'pillar-blue': 'rgb(37, 99, 235)',
+        'pillar-gray': 'rgb(243, 244, 246)',
+        'pillar-orange': 'rgb(249, 115, 22)',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			muted: {
