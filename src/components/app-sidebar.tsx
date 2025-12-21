@@ -1,82 +1,57 @@
 import React from "react";
-import { Home, Layers, Compass, Star, Settings, LifeBuoy } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, BarChart2, Settings, Building, Wrench, Truck, FileText, HelpCircle } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
   SidebarHeader,
-  SidebarSeparator,
-  SidebarInput,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuAction,
-  SidebarMenuBadge,
 } from "@/components/ui/sidebar";
-
+import { useLocation } from "react-router-dom";
+const navItems = [
+  { href: "/", icon: LayoutDashboard, label: "Dashboard", exact: true },
+  { href: "/projects", icon: Briefcase, label: "Projects" },
+  { href: "/clients", icon: Users, label: "Clients" },
+  { href: "/invoices", icon: FileText, label: "Invoices" },
+  { href: "/financials", icon: BarChart2, label: "Financials" },
+  { href: "/resources", icon: Wrench, label: "Resources" },
+  { href: "/suppliers", icon: Truck, label: "Suppliers" },
+  { href: "/help", icon: HelpCircle, label: "Help & Guide" },
+  { href: "/settings", icon: Settings, label: "Settings" },
+];
 export function AppSidebar(): JSX.Element {
+  const location = useLocation();
+  const isActive = (item: typeof navItems[0]) => {
+    if (item.exact) {
+      return location.pathname === item.href;
+    }
+    // Special case for projects on dashboard
+    if (item.href === '/projects' && location.pathname === '/') return true;
+    return location.pathname.startsWith(item.href);
+  };
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1">
-          <div className="h-6 w-6 rounded-md bg-gradient-to-br from-indigo-500 to-purple-500" />
-          <span className="text-sm font-medium">Template</span>
-        </div>
-        <SidebarInput placeholder="Search" />
+        <a href="/" className="flex items-center gap-2 px-2 py-1">
+          <Building className="h-6 w-6 text-primary" />
+          <span className="text-lg font-bold">Pillar</span>
+        </a>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive>
-                <a href="#"><Home /> <span>Home</span></a>
+        <SidebarMenu>
+          {navItems.map((item) => (
+            <SidebarMenuItem key={item.href + item.label}>
+              <SidebarMenuButton asChild isActive={isActive(item)}>
+                <a href={item.href}>
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="#"><Layers /> <span>Projects</span></a>
-              </SidebarMenuButton>
-              <SidebarMenuAction>
-                <Star className="size-4" />
-              </SidebarMenuAction>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="#"><Compass /> <span>Explore</span></a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Quick Links</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="#"><Star /> <span>Starred</span></a>
-              </SidebarMenuButton>
-              <SidebarMenuBadge>5</SidebarMenuBadge>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="#"><LifeBuoy /> <span>Support</span></a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <a href="#"><Settings /> <span>Settings</span></a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
+          ))}
+        </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter>
-        <div className="px-2 text-xs text-muted-foreground">A simple shadcn sidebar</div>
-      </SidebarFooter>
     </Sidebar>
   );
 }

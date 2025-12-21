@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ProjectCard } from '@/components/ProjectCard';
 import { api } from '@/lib/api-client';
 import type { Project } from '@shared/types';
-import { PlusCircle, LayoutGrid, List, Trash2 } from 'lucide-react';
+import { PlusCircle, LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { NewProjectForm } from '@/components/NewProjectForm';
@@ -71,18 +71,6 @@ export function ProjectsPage() {
       navigate(`/projects/${newProject.id}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create project.');
-    }
-  };
-  const handleDeleteProject = async (e: React.MouseEvent, projectId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) return;
-    try {
-      await api(`/api/projects/${projectId}`, { method: 'DELETE' });
-      toast.success('Project deleted successfully');
-      fetchProjects();
-    } catch (err) {
-      toast.error('Failed to delete project');
     }
   };
   const filteredProjects = useMemo(() => {
@@ -169,17 +157,7 @@ export function ProjectsPage() {
                   ))
                 : filteredProjects.length > 0 ? (
                     filteredProjects.map((project) => (
-                      <div key={project.id} className="relative group">
-                        <ProjectCard project={project} />
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
-                          onClick={(e) => handleDeleteProject(e, project.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <ProjectCard key={project.id} project={project} />
                     ))
                   ) : (
                     <div className="col-span-full text-center py-12 border-2 border-dashed rounded-lg">
@@ -200,7 +178,6 @@ export function ProjectsPage() {
                       <TableHead>Location</TableHead>
                       <TableHead className="text-right">Budget</TableHead>
                       <TableHead className="text-right">Due Date</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -213,7 +190,6 @@ export function ProjectsPage() {
                           <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                           <TableCell><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
                           <TableCell><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
-                          <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                         </TableRow>
                       ))
                     ) : filteredProjects.length > 0 ? (
@@ -233,16 +209,11 @@ export function ProjectsPage() {
                           <TableCell className="text-right text-muted-foreground">
                             {new Date(project.endDate).toLocaleDateString()}
                           </TableCell>
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" onClick={(e) => handleDeleteProject(e, project.id)}>
-                              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                            </Button>
-                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center h-24">
+                        <TableCell colSpan={6} className="text-center h-24">
                           No projects found with status "{statusFilter === 'all' ? 'Any' : statusFilter}".
                         </TableCell>
                       </TableRow>

@@ -5,11 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { PlusCircle, FileText, Info, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle, FileText, Info } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { Client } from '@shared/types';
 import { NewClientForm } from '@/components/NewClientForm';
-import { EditClientForm } from '@/components/EditClientForm';
 import { Toaster, toast } from '@/components/ui/sonner';
 import { useNavigate } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -17,7 +16,6 @@ export function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewClientOpen, setNewClientOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const navigate = useNavigate();
   const fetchClients = useCallback(async () => {
     try {
@@ -43,30 +41,6 @@ export function ClientsPage() {
       fetchClients();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create client.');
-    }
-  };
-  const handleUpdateClient = async (values: Partial<Client>) => {
-    if (!editingClient) return;
-    try {
-      await api(`/api/clients/${editingClient.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(values),
-      });
-      toast.success('Client updated successfully!');
-      setEditingClient(null);
-      fetchClients();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update client.');
-    }
-  };
-  const handleDeleteClient = async (clientId: string) => {
-    if (!window.confirm('Are you sure you want to delete this client? This action cannot be undone.')) return;
-    try {
-      await api(`/api/clients/${clientId}`, { method: 'DELETE' });
-      toast.success('Client deleted successfully');
-      fetchClients();
-    } catch (err) {
-      toast.error('Failed to delete client');
     }
   };
   return (
@@ -140,18 +114,10 @@ export function ClientsPage() {
                         <TableCell>{client.email}</TableCell>
                         <TableCell>{client.phone}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => setEditingClient(client)}>
-                              <Pencil className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteClient(client.id)}>
-                              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => navigate(`/clients/${client.id}/statement`)}>
-                              <FileText className="mr-2 h-4 w-4" />
-                              View Statement
-                            </Button>
-                          </div>
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/clients/${client.id}/statement`)}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            View Statement
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -168,21 +134,6 @@ export function ClientsPage() {
           </CardContent>
         </Card>
       </div>
-      <Dialog open={!!editingClient} onOpenChange={(open) => !open && setEditingClient(null)}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle>Edit Client</DialogTitle>
-            <DialogDescription>Update the client's contact information.</DialogDescription>
-          </DialogHeader>
-          {editingClient && (
-            <EditClientForm
-              initialValues={editingClient}
-              onSubmit={handleUpdateClient}
-              onFinished={() => setEditingClient(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
       <Toaster richColors />
     </AppLayout>
   );

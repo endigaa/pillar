@@ -10,8 +10,6 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { usePagination } from '@/hooks/usePagination';
-import { DataTablePagination } from '@/components/DataTablePagination';
 const formatCurrency = (amountInCents: number) => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amountInCents / 100);
 };
@@ -56,14 +54,6 @@ export function InvoicesPage() {
       })
       .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
   }, [invoices, searchTerm, statusFilter]);
-  const {
-    currentData: currentInvoices,
-    currentPage,
-    totalPages,
-    goToPage,
-    nextPage,
-    prevPage
-  } = usePagination(filteredInvoices, 10);
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -120,8 +110,8 @@ export function InvoicesPage() {
                       <TableCell colSpan={7}><Skeleton className="h-8 w-full" /></TableCell>
                     </TableRow>
                   ))
-                ) : currentInvoices.length > 0 ? (
-                  currentInvoices.map((invoice) => (
+                ) : filteredInvoices.length > 0 ? (
+                  filteredInvoices.map((invoice) => (
                     <TableRow key={invoice.id} onClick={() => navigate(`/invoices/${invoice.id}`)} className="cursor-pointer hover:bg-muted/50">
                       <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                       <TableCell>{invoice.projectName}</TableCell>
@@ -139,13 +129,6 @@ export function InvoicesPage() {
                 )}
               </TableBody>
             </Table>
-            <DataTablePagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={goToPage}
-              onNext={nextPage}
-              onPrevious={prevPage}
-            />
           </CardContent>
         </Card>
       </div>

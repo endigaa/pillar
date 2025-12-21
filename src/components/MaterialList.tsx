@@ -1,3 +1,5 @@
+// This component is created for future use but is not yet integrated in this phase.
+// It provides the UI for managing materials for a specific supplier.
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,8 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { PlusCircle } from 'lucide-react';
 import type { Material } from '@shared/types';
 import { AddMaterialForm } from './AddMaterialForm';
-import { usePagination } from '@/hooks/usePagination';
-import { DataTablePagination } from '@/components/DataTablePagination';
 const formatCurrency = (amountInCents: number) => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -21,14 +21,6 @@ interface MaterialListProps {
 }
 export function MaterialList({ materials, supplierId, onAddMaterial }: MaterialListProps) {
   const [isNewMaterialOpen, setNewMaterialOpen] = useState(false);
-  const {
-    currentData: currentMaterials,
-    currentPage,
-    totalPages,
-    goToPage,
-    nextPage,
-    prevPage
-  } = usePagination(materials, 10);
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -62,8 +54,8 @@ export function MaterialList({ materials, supplierId, onAddMaterial }: MaterialL
             </TableRow>
           </TableHeader>
           <TableBody>
-            {currentMaterials.length > 0 ? (
-              currentMaterials.map((material) => (
+            {materials.length > 0 ? (
+              materials.map((material) => (
                 <TableRow key={material.id}>
                   <TableCell className="font-medium">{material.name}</TableCell>
                   <TableCell>{material.unit}</TableCell>
@@ -79,13 +71,6 @@ export function MaterialList({ materials, supplierId, onAddMaterial }: MaterialL
             )}
           </TableBody>
         </Table>
-        <DataTablePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={goToPage}
-          onNext={nextPage}
-          onPrevious={prevPage}
-        />
       </CardContent>
     </Card>
   );

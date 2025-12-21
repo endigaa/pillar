@@ -8,12 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Phone, Mail, MapPin, Truck, FileText, User, Pencil } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, MapPin, Truck, FileText, User } from 'lucide-react';
 import { MaterialList } from '@/components/MaterialList';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { EditSupplierForm } from '@/components/EditSupplierForm';
 const formatCurrency = (amountInCents: number) => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -26,7 +24,6 @@ export function SupplierDetailPage() {
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
   const fetchData = useCallback(async () => {
     if (!id) return;
     try {
@@ -59,20 +56,6 @@ export function SupplierDetailPage() {
       toast.error('Failed to add material');
     }
   };
-  const handleUpdateSupplier = async (values: Partial<Supplier>) => {
-    if (!id) return;
-    try {
-      await api(`/api/suppliers/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(values),
-      });
-      toast.success('Supplier updated successfully!');
-      setIsEditing(false);
-      fetchData();
-    } catch (err) {
-      toast.error('Failed to update supplier');
-    }
-  };
   if (isLoading) {
     return (
       <AppLayout>
@@ -102,9 +85,6 @@ export function SupplierDetailPage() {
                                 <Badge variant="outline">{supplier.supplyReach}</Badge>
                             </CardDescription>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                            <Pencil className="mr-2 h-4 w-4" /> Edit Supplier
-                        </Button>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -176,10 +156,10 @@ export function SupplierDetailPage() {
                 <TabsTrigger value="quotes">Quote History</TabsTrigger>
             </TabsList>
             <TabsContent value="materials" className="mt-4">
-                <MaterialList
-                    materials={supplier.materials}
-                    supplierId={supplier.id}
-                    onAddMaterial={handleAddMaterial}
+                <MaterialList 
+                    materials={supplier.materials} 
+                    supplierId={supplier.id} 
+                    onAddMaterial={handleAddMaterial} 
                 />
             </TabsContent>
             <TabsContent value="quotes" className="mt-4">
@@ -228,19 +208,6 @@ export function SupplierDetailPage() {
             </TabsContent>
         </Tabs>
       </div>
-      <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="sm:max-w-[525px]">
-          <DialogHeader>
-            <DialogTitle>Edit Supplier</DialogTitle>
-            <DialogDescription>Update the supplier's details.</DialogDescription>
-          </DialogHeader>
-          <EditSupplierForm
-            initialValues={supplier}
-            onSubmit={handleUpdateSupplier}
-            onFinished={() => setIsEditing(false)}
-          />
-        </DialogContent>
-      </Dialog>
     </AppLayout>
   );
 }

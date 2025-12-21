@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { PlusCircle, Search, Phone, Mail, MapPin, ArrowRight, User, Trash2 } from 'lucide-react';
+import { PlusCircle, Search, Phone, Mail, MapPin, ArrowRight, User } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { Supplier, SupplyReach } from '@shared/types';
 import { AddSupplierForm } from './AddSupplierForm';
@@ -44,17 +44,6 @@ export function SupplierList() {
       fetchSuppliers();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add supplier.');
-    }
-  };
-  const handleDeleteSupplier = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // Prevent card click navigation
-    if (!confirm('Are you sure you want to delete this supplier? This action cannot be undone.')) return;
-    try {
-      await api(`/api/suppliers/${id}`, { method: 'DELETE' });
-      toast.success('Supplier deleted successfully');
-      fetchSuppliers();
-    } catch (err) {
-      toast.error('Failed to delete supplier');
     }
   };
   const uniqueCategories = useMemo(() => {
@@ -128,20 +117,12 @@ export function SupplierList() {
       ) : filteredSuppliers.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSuppliers.map(supplier => (
-            <Card key={supplier.id} className="flex flex-col hover:shadow-md transition-shadow group relative">
+            <Card key={supplier.id} className="flex flex-col hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg font-bold truncate pr-8">{supplier.name}</CardTitle>
+                    <CardTitle className="text-lg font-bold truncate pr-2">{supplier.name}</CardTitle>
                     <Badge variant="secondary" className="shrink-0">{supplier.category}</Badge>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                  onClick={(e) => handleDeleteSupplier(e, supplier.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </CardHeader>
               <CardContent className="flex-1 space-y-3 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">

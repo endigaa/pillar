@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { PlusCircle, CalendarDays, MapPin, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle, CalendarDays, MapPin, Pencil } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { Personnel } from '@shared/types';
 import { AddPersonnelForm } from './AddPersonnelForm';
@@ -14,8 +14,6 @@ import { Badge } from './ui/badge';
 import { ManageDaysOffDialog } from './ManageDaysOffDialog';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { cn } from '@/lib/utils';
-import { usePagination } from '@/hooks/usePagination';
-import { DataTablePagination } from '@/components/DataTablePagination';
 const formatCurrency = (amountInCents: number) => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -41,14 +39,6 @@ export function PersonnelManagement() {
   useEffect(() => {
     fetchPersonnel();
   }, [fetchPersonnel]);
-  const {
-    currentData: currentPersonnel,
-    currentPage,
-    totalPages,
-    goToPage,
-    nextPage,
-    prevPage
-  } = usePagination(personnel, 10);
   const handleCreatePersonnel = async (values: Omit<Personnel, 'id' | 'associatedExpenseIds'>) => {
     try {
       await api('/api/personnel', {
@@ -59,16 +49,6 @@ export function PersonnelManagement() {
       fetchPersonnel();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add personnel.');
-    }
-  };
-  const handleDeletePersonnel = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this personnel record?')) return;
-    try {
-      await api(`/api/personnel/${id}`, { method: 'DELETE' });
-      toast.success('Personnel deleted successfully');
-      fetchPersonnel();
-    } catch (err) {
-      toast.error('Failed to delete personnel');
     }
   };
   const formatRate = (p: Personnel) => {
@@ -137,8 +117,8 @@ export function PersonnelManagement() {
                     <TableCell><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : currentPersonnel.length > 0 ? (
-                currentPersonnel.map((p) => {
+              ) : personnel.length > 0 ? (
+                personnel.map((p) => {
                   const terminated = isTerminated(p);
                   return (
                     <TableRow key={p.id} className={cn(terminated && "bg-muted/50 opacity-70")}>
@@ -207,9 +187,6 @@ export function PersonnelManagement() {
                           <Button variant="ghost" size="icon" onClick={() => setEditingPersonnel(p)}>
                             <Pencil className="h-4 w-4 text-muted-foreground" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeletePersonnel(p.id)}>
-                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                          </Button>
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button variant="outline" size="sm">
@@ -233,13 +210,6 @@ export function PersonnelManagement() {
               )}
             </TableBody>
           </Table>
-          <DataTablePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={goToPage}
-            onNext={nextPage}
-            onPrevious={prevPage}
-          />
         </CardContent>
       </Card>
       <Dialog open={!!editingPersonnel} onOpenChange={(open) => !open && setEditingPersonnel(null)}>

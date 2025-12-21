@@ -4,7 +4,7 @@ import { api } from '@/lib/api-client';
 import type { Project, ClientDocument, ChangeOrder } from '@shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building, DollarSign, TrendingUp, TrendingDown, Wallet, CheckCircle2, MapPin, Upload, FileText, ExternalLink, MessageSquare, FileSignature, Check, X, User, Users, ZoomIn, HardHat, Recycle, Image as ImageIcon, Eye } from 'lucide-react';
+import { Building, DollarSign, TrendingUp, TrendingDown, Wallet, CheckCircle2, MapPin, Upload, FileText, ExternalLink, MessageSquare, FileSignature, Check, X, User, ZoomIn, Users, HardHat, Recycle, Image as ImageIcon } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,10 +22,13 @@ import { calculateProjectFinancials } from '@/lib/utils';
 import { SiteResources } from '@/components/SiteResources';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ChangeOrderDetailDialog } from '@/components/ChangeOrderDetailDialog';
-import { useCurrency } from '@/hooks/useCurrency';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-const StatCard = ({ title, value, fullValue, icon: Icon, isLoading }: { title: string; value: string; fullValue?: string; icon: React.ElementType; isLoading: boolean }) => (
+const formatCurrency = (amountInCents: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amountInCents / 100);
+};
+const StatCard = ({ title, value, icon: Icon, isLoading }: { title: string; value: string; icon: React.ElementType; isLoading: boolean }) => (
   <Card className="shadow-md">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -35,16 +38,7 @@ const StatCard = ({ title, value, fullValue, icon: Icon, isLoading }: { title: s
       {isLoading ? (
         <Skeleton className="h-8 w-3/4" />
       ) : (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="text-2xl md:text-3xl font-bold text-primary truncate cursor-default">{value}</div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{fullValue || value}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div className="text-3xl font-bold text-primary">{value}</div>
       )}
     </CardContent>
   </Card>
@@ -60,9 +54,7 @@ export function ClientPortalPage() {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [isSendingFeedback, setIsSendingFeedback] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
-  const [viewingChangeOrder, setViewingChangeOrder] = useState<ChangeOrder | null>(null);
   const { profile, fetchProfile, isLoading: isProfileLoading } = useCompanyProfile();
-  const { formatCurrency } = useCurrency();
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
@@ -216,47 +208,13 @@ export function ClientPortalPage() {
                 </div>
               )}
             </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <StatCard
-                title="Total Budget"
-                value={formatCurrency(project?.budget ?? 0, { notation: 'compact', maximumFractionDigits: 2 })}
-                fullValue={formatCurrency(project?.budget ?? 0)}
-                icon={DollarSign}
-                isLoading={isLoading}
-              />
-              <StatCard
-                title="Funds Deposited"
-                value={formatCurrency(totalDeposits, { notation: 'compact', maximumFractionDigits: 2 })}
-                fullValue={formatCurrency(totalDeposits)}
-                icon={TrendingUp}
-                isLoading={isLoading}
-              />
-              <StatCard
-                title="Funds Utilized"
-                value={formatCurrency(totalUtilized, { notation: 'compact', maximumFractionDigits: 2 })}
-                fullValue={formatCurrency(totalUtilized)}
-                icon={TrendingDown}
-                isLoading={isLoading}
-              />
-              <StatCard
-                title="Remaining Balance"
-                value={formatCurrency(balance, { notation: 'compact', maximumFractionDigits: 2 })}
-                fullValue={formatCurrency(balance)}
-                icon={Wallet}
-                isLoading={isLoading}
-              />
-              <StatCard
-                title="Active Personnel"
-                value={project?.activePersonnelCount?.toString() || '0'}
-                icon={Users}
-                isLoading={isLoading}
-              />
-              <StatCard
-                title="Casual Staff"
-                value={project?.casualPersonnelCount?.toString() || '0'}
-                icon={HardHat}
-                isLoading={isLoading}
-              />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <StatCard title="Total Budget" value={formatCurrency(project?.budget ?? 0)} icon={DollarSign} isLoading={isLoading} />
+              <StatCard title="Funds Deposited" value={formatCurrency(totalDeposits)} icon={TrendingUp} isLoading={isLoading} />
+              <StatCard title="Funds Utilized" value={formatCurrency(totalUtilized)} icon={TrendingDown} isLoading={isLoading} />
+              <StatCard title="Remaining Balance" value={formatCurrency(balance)} icon={Wallet} isLoading={isLoading} />
+              <StatCard title="Active Personnel" value={project?.activePersonnelCount?.toString() || '0'} icon={Users} isLoading={isLoading} />
+              <StatCard title="Casual Staff" value={project?.casualPersonnelCount?.toString() || '0'} icon={HardHat} isLoading={isLoading} />
             </div>
             {/* Project Timeline Section */}
             {sortedStages.length > 0 && (
@@ -363,21 +321,16 @@ export function ClientPortalPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                                <Button size="sm" variant="ghost" onClick={() => setViewingChangeOrder(co)}>
-                                    <Eye className="mr-2 h-4 w-4" /> View
+                            {co.status === 'Sent' && (
+                              <div className="flex justify-end gap-2">
+                                <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleUpdateChangeOrderStatus(co.id, 'Approved')}>
+                                  <Check className="mr-1 h-4 w-4" /> Approve
                                 </Button>
-                                {co.status === 'Sent' && (
-                                <>
-                                    <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleUpdateChangeOrderStatus(co.id, 'Approved')}>
-                                    <Check className="mr-1 h-4 w-4" /> Approve
-                                    </Button>
-                                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleUpdateChangeOrderStatus(co.id, 'Rejected')}>
-                                    <X className="mr-1 h-4 w-4" /> Reject
-                                    </Button>
-                                </>
-                                )}
-                            </div>
+                                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleUpdateChangeOrderStatus(co.id, 'Rejected')}>
+                                  <X className="mr-1 h-4 w-4" /> Reject
+                                </Button>
+                              </div>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -517,16 +470,11 @@ export function ClientPortalPage() {
                               <div className="flex items-start gap-3">
                                 <CheckCircle2 className={cn("h-5 w-5 mt-0.5 flex-shrink-0", task.status === 'Done' ? 'text-green-500' : 'text-gray-300 dark:text-gray-600')} />
                                 <div>
-                                  <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="flex items-center gap-2">
                                     <p className={cn("font-medium", task.status === 'Done' && 'line-through text-muted-foreground')}>{task.description}</p>
                                     {task.constructionStageName && (
                                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal">
                                         {task.constructionStageName}
-                                      </Badge>
-                                    )}
-                                    {task.areaName && (
-                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-normal">
-                                        {task.areaName}
                                       </Badge>
                                     )}
                                   </div>
@@ -564,11 +512,6 @@ export function ClientPortalPage() {
         initialIndex={viewerIndex ?? 0}
         isOpen={viewerIndex !== null}
         onClose={() => setViewerIndex(null)}
-      />
-      <ChangeOrderDetailDialog
-        changeOrder={viewingChangeOrder}
-        open={!!viewingChangeOrder}
-        onOpenChange={(open) => !open && setViewingChangeOrder(null)}
       />
     </div>
   );

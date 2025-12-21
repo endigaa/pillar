@@ -3,7 +3,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api-client';
-import type { Project, GeneralExpense, WorkshopMaterial, GeneralIncome } from '@shared/types';
+import type { Project, GeneralExpense, WorkshopMaterial } from '@shared/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { DollarSign, TrendingUp, TrendingDown, Upload, Download, PlusCircle, CalendarIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { TransactionImporter } from '@/components/TransactionImporter';
 import { AddGeneralExpenseForm } from '@/components/AddGeneralExpenseForm';
-import { AddGeneralIncomeForm } from '@/components/AddGeneralIncomeForm';
 import { exportToCsv, cn, getFinancialYearRange } from '@/lib/utils';
 import { toast } from 'sonner';
 import { DateRange } from 'react-day-picker';
@@ -42,12 +41,10 @@ const StatCard = ({ title, value, icon: Icon, isLoading }: { title: string; valu
 export function FinancialsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [generalExpenses, setGeneralExpenses] = useState<GeneralExpense[]>([]);
-  const [generalIncome, setGeneralIncome] = useState<GeneralIncome[]>([]);
   const [workshopMaterials, setWorkshopMaterials] = useState<WorkshopMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isImportOpen, setImportOpen] = useState(false);
   const [isAddGeneralExpenseOpen, setAddGeneralExpenseOpen] = useState(false);
-  const [isAddGeneralIncomeOpen, setAddGeneralIncomeOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const { profile, fetchProfile } = useCompanyProfile();
   const [hasInitializedDateRange, setHasInitializedDateRange] = useState(false);
@@ -61,6 +58,7 @@ export function FinancialsPage() {
       setDateRange({ from: start, to: end });
       setHasInitializedDateRange(true);
     } else if (!profile && !hasInitializedDateRange && !isLoading) {
+      // Fallback if profile fails or takes too long, though fetchProfile handles loading state
       const { start, end } = getFinancialYearRange();
       setDateRange({ from: start, to: end });
       setHasInitializedDateRange(true);
@@ -69,15 +67,13 @@ export function FinancialsPage() {
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [projectData, generalExpenseData, generalIncomeData, materialData] = await Promise.all([
+      const [projectData, generalExpenseData, materialData] = await Promise.all([
         api<Project[]>('/api/projects'),
         api<GeneralExpense[]>('/api/general-expenses'),
-        api<GeneralIncome[]>('/api/general-income'),
         api<WorkshopMaterial[]>('/api/workshop-materials'),
       ]);
       setProjects(projectData);
       setGeneralExpenses(generalExpenseData);
-      setGeneralIncome(generalIncomeData);
       setWorkshopMaterials(materialData);
     } catch (err) {
       toast.error("Failed to load financial data.");
@@ -90,7 +86,7 @@ export function FinancialsPage() {
   }, [fetchData]);
   const handleImportSuccess = () => {
     setImportOpen(false);
-    fetchData();
+    fetchData(); // Refresh data after successful import
   };
   const handleAddGeneralExpense = async (values: Omit<GeneralExpense, 'id'>) => {
     try {
@@ -99,15 +95,6 @@ export function FinancialsPage() {
       fetchData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add expense.');
-    }
-  };
-  const handleAddGeneralIncome = async (values: Omit<GeneralIncome, 'id'>) => {
-    try {
-      await api('/api/general-income', { method: 'POST', body: JSON.stringify(values) });
-      toast.success('General income added successfully!');
-      fetchData();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add income.');
     }
   };
   // Filter data based on date range
@@ -127,20 +114,12 @@ export function FinancialsPage() {
     const end = endOfDay(dateRange.to);
     return generalExpenses.filter(e => isWithinInterval(new Date(e.date), { start, end }));
   }, [generalExpenses, dateRange]);
-  const filteredGeneralIncome = useMemo(() => {
-    if (!dateRange?.from || !dateRange?.to) return generalIncome;
-    const start = startOfDay(dateRange.from);
-    const end = endOfDay(dateRange.to);
-    return generalIncome.filter(i => isWithinInterval(new Date(i.date), { start, end }));
-  }, [generalIncome, dateRange]);
   const allProjectExpenses = filteredProjects.flatMap(p => p.expenses);
-  const totalProjectDeposits = filteredProjects.flatMap(p => p.deposits).reduce((sum, d) => sum + d.amount, 0);
-  const totalGeneralIncome = filteredGeneralIncome.reduce((sum, i) => sum + i.amount, 0);
-  const totalCollected = totalProjectDeposits + totalGeneralIncome;
+  const totalCollected = filteredProjects.flatMap(p => p.deposits).reduce((sum, d) => sum + d.amount, 0);
   const totalProjectExpenses = allProjectExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalGeneralExpenses = filteredGeneralExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalExpenses = totalProjectExpenses + totalGeneralExpenses;
-  const netProfit = totalCollected - totalExpenses;
+  const netProfit = totalCollected - totalExpenses; // Cash basis P&L for the period
   const expenseByCategory = [...allProjectExpenses, ...filteredGeneralExpenses].reduce((acc, expense) => {
     acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
     return acc;
@@ -152,7 +131,7 @@ export function FinancialsPage() {
   }));
   const barChartData = filteredProjects.map(project => {
       const expenses = project.expenses.reduce((sum, e) => sum + e.amount, 0);
-      const revenue = project.deposits.reduce((sum, d) => sum + d.amount, 0);
+      const revenue = project.deposits.reduce((sum, d) => sum + d.amount, 0); // Use collected for period
       if (expenses === 0 && revenue === 0) return null;
       return {
           name: project.name.split(' ').slice(0, 2).join(' '),
@@ -161,17 +140,17 @@ export function FinancialsPage() {
       }
   }).filter(Boolean);
   // Simplified Balance Sheet data
-  const bsProjects = projects;
+  const bsProjects = projects; // Use all projects for cumulative BS
   const bsDate = dateRange?.to || new Date();
   const bsExpenses = bsProjects.flatMap(p => p.expenses).filter(e => new Date(e.date) <= bsDate);
   const bsDeposits = bsProjects.flatMap(p => p.deposits).filter(d => new Date(d.date) <= bsDate);
   const bsGeneralExpenses = generalExpenses.filter(e => new Date(e.date) <= bsDate);
-  const bsGeneralIncome = generalIncome.filter(i => new Date(i.date) <= bsDate);
   const totalBsExpenses = bsExpenses.reduce((sum, e) => sum + e.amount, 0) + bsGeneralExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const totalBsDeposits = bsDeposits.reduce((sum, d) => sum + d.amount, 0) + bsGeneralIncome.reduce((sum, i) => sum + i.amount, 0);
-  const totalBsRevenue = bsProjects.reduce((sum, p) => sum + p.budget, 0);
+  const totalBsDeposits = bsDeposits.reduce((sum, d) => sum + d.amount, 0);
+  const totalBsRevenue = bsProjects.reduce((sum, p) => sum + p.budget, 0); // Total contract value
   const cash = totalBsDeposits - totalBsExpenses;
-  const accountsReceivable = totalBsRevenue - bsDeposits.reduce((sum, d) => sum + d.amount, 0); // Only project deposits count against AR
+  const accountsReceivable = totalBsRevenue - totalBsDeposits; // Rough estimate
+  // Inventory Value Calculation
   const totalInventoryValue = workshopMaterials.reduce((sum, m) => sum + (m.quantity * (m.costPerUnit || 0)), 0);
   const totalAssets = cash + accountsReceivable + totalInventoryValue;
   const totalLiabilities = 0;
@@ -211,17 +190,8 @@ export function FinancialsPage() {
             amount: expense.amount,
         });
     });
-    filteredGeneralIncome.forEach(income => {
-        items.push({
-            date: income.date,
-            project: 'General',
-            description: income.description,
-            type: 'Income',
-            amount: income.amount,
-        });
-    });
     return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [filteredProjects, filteredGeneralExpenses, filteredGeneralIncome]);
+  }, [filteredProjects, filteredGeneralExpenses]);
   const handleExport = async (type: 'ledger' | 'pnl' | 'balance-sheet') => {
     try {
       if (type === 'ledger') {
@@ -236,8 +206,7 @@ export function FinancialsPage() {
       } else if (type === 'pnl') {
         const formattedData = [
           { Item: 'INCOME', Amount: '' },
-          { Item: 'Project Deposits', Amount: (totalProjectDeposits / 100).toFixed(2) },
-          { Item: 'General Income', Amount: (totalGeneralIncome / 100).toFixed(2) },
+          { Item: 'Project Deposits (Revenue)', Amount: (totalCollected / 100).toFixed(2) },
           { Item: 'Total Income', Amount: (totalCollected / 100).toFixed(2) },
           { Item: '', Amount: '' },
           { Item: 'EXPENSES', Amount: '' },
@@ -293,7 +262,6 @@ export function FinancialsPage() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="ledger">Ledger</TabsTrigger>
             <TabsTrigger value="general_expenses">General Expenses</TabsTrigger>
-            <TabsTrigger value="general_income">General Income</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-8 mt-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -366,12 +334,8 @@ export function FinancialsPage() {
                                     <TableCell colSpan={2} className="font-semibold">Income</TableCell>
                                 </TableRow>
                                 <TableRow>
-                                    <TableCell className="pl-6">Project Deposits</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(totalProjectDeposits)}</TableCell>
-                                </TableRow>
-                                <TableRow>
-                                    <TableCell className="pl-6">General Income</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(totalGeneralIncome)}</TableCell>
+                                    <TableCell className="pl-6">Project Deposits (Revenue)</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(totalCollected)}</TableCell>
                                 </TableRow>
                                 <TableRow className="border-t-2 border-border">
                                     <TableCell className="font-bold">Total Income</TableCell>
@@ -575,70 +539,6 @@ export function FinancialsPage() {
                       <TableRow>
                         <TableCell colSpan={4} className="text-center h-24">
                           No general expenses found for this period.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="general_income" className="mt-4">
-            <Card>
-              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <CardTitle>General Business Income</CardTitle>
-                  <CardDescription>Income not associated with a specific project (e.g. Asset Sales).</CardDescription>
-                </div>
-                <Dialog open={isAddGeneralIncomeOpen} onOpenChange={setAddGeneralIncomeOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add General Income
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[480px]">
-                    <DialogHeader>
-                      <DialogTitle>Add General Income</DialogTitle>
-                      <DialogDescription>Log new business income not tied to a project.</DialogDescription>
-                    </DialogHeader>
-                    <AddGeneralIncomeForm onSubmit={handleAddGeneralIncome} onFinished={() => setAddGeneralIncomeOpen(false)} />
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      Array.from({ length: 3 }).map((_, i) => (
-                        <TableRow key={i}>
-                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-28 ml-auto" /></TableCell>
-                        </TableRow>
-                      ))
-                    ) : filteredGeneralIncome.length > 0 ? (
-                      filteredGeneralIncome.map((income) => (
-                        <TableRow key={income.id}>
-                          <TableCell>{new Date(income.date).toLocaleDateString()}</TableCell>
-                          <TableCell className="font-medium">{income.description}</TableCell>
-                          <TableCell><Badge variant="outline">{income.category}</Badge></TableCell>
-                          <TableCell className="text-right font-mono text-green-600">{formatCurrency(income.amount)}</TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center h-24">
-                          No general income found for this period.
                         </TableCell>
                       </TableRow>
                     )}

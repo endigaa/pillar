@@ -19,11 +19,8 @@ import {
   Info,
   HardHat,
   Warehouse,
-  CalendarIcon,
-  Code
+  CalendarIcon
 } from 'lucide-react';
-import { SampleErrorBoundary } from '@/components/SampleErrorBoundary';
-import { BuggyCounter } from '@/components/BuggyCounter';
 export function HelpPage() {
   return (
     <AppLayout>
@@ -316,26 +313,6 @@ export function HelpPage() {
                     <li><strong>Company Profile:</strong> Update your company name, address, logo, and preferred currency. This information appears on all generated documents and the client portal.</li>
                     <li><strong>Categories:</strong> Customize the dropdown options for Expense Categories, Supplier Categories, and Construction Stages to fit your specific terminology.</li>
                   </ul>
-                </AccordionContent>
-              </AccordionItem>
-              {/* 9. Developer Tools */}
-              <AccordionItem value="dev-tools">
-                <AccordionTrigger className="text-lg font-medium">
-                  <div className="flex items-center gap-3">
-                    <Code className="h-5 w-5 text-muted-foreground" />
-                    Developer Tools & Error Handling
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-4 p-4">
-                  <p>
-                    This section demonstrates the application's robust error handling capabilities. We use <strong>React Error Boundaries</strong> to catch unexpected JavaScript errors in the component tree, log them, and display a fallback UI instead of crashing the entire application.
-                  </p>
-                  <div className="border p-6 rounded-lg bg-background">
-                    <h4 className="font-semibold text-foreground mb-4">Live Demo: Error Boundary</h4>
-                    <SampleErrorBoundary>
-                      <BuggyCounter />
-                    </SampleErrorBoundary>
-                  </div>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

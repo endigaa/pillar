@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { PlusCircle, ArrowRightLeft, Warehouse, Pencil, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { PlusCircle, ArrowRightLeft, Warehouse, Pencil, Image as ImageIcon } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { WorkshopMaterial, Workshop } from '@shared/types';
 import { Toaster, toast } from '@/components/ui/sonner';
@@ -13,11 +13,8 @@ import { AddWorkshopForm } from './AddWorkshopForm';
 import { MoveInventoryForm } from './MoveInventoryForm';
 import { EditWorkshopMaterialForm } from './EditWorkshopMaterialForm';
 import { AddWorkshopMaterialForm } from './AddWorkshopMaterialForm';
-import { EditWorkshopForm } from './EditWorkshopForm';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { usePagination } from '@/hooks/usePagination';
-import { DataTablePagination } from '@/components/DataTablePagination';
 const formatCurrency = (amountInCents: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -33,7 +30,6 @@ export function WorkshopInventory() {
   const [isNewWorkshopOpen, setNewWorkshopOpen] = useState(false);
   const [moveMaterial, setMoveMaterial] = useState<WorkshopMaterial | null>(null);
   const [editMaterial, setEditMaterial] = useState<WorkshopMaterial | null>(null);
-  const [editingWorkshop, setEditingWorkshop] = useState<Workshop | null>(null);
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -43,13 +39,8 @@ export function WorkshopInventory() {
       ]);
       setWorkshops(wsData);
       setMaterials(matData);
-      // Ensure activeWorkshopId is valid
-      if (wsData.length > 0) {
-        if (!activeWorkshopId || !wsData.find(w => w.id === activeWorkshopId)) {
-          setActiveWorkshopId(wsData[0].id);
-        }
-      } else {
-        setActiveWorkshopId('');
+      if (wsData.length > 0 && !activeWorkshopId) {
+        setActiveWorkshopId(wsData[0].id);
       }
     } catch (err) {
       toast.error('Failed to fetch inventory data');
@@ -65,45 +56,9 @@ export function WorkshopInventory() {
     setNewWorkshopOpen(false);
     setMoveMaterial(null);
     setEditMaterial(null);
-    setEditingWorkshop(null);
     fetchData();
   };
-  const handleDeleteWorkshop = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this workshop? All materials inside will also be deleted.')) return;
-    try {
-      await api(`/api/workshops/${id}`, { method: 'DELETE' });
-      toast.success('Workshop deleted successfully');
-      const remaining = workshops.filter(w => w.id !== id);
-      setWorkshops(remaining);
-      if (activeWorkshopId === id && remaining.length > 0) {
-        setActiveWorkshopId(remaining[0].id);
-      } else if (remaining.length === 0) {
-        setActiveWorkshopId('');
-      }
-      fetchData();
-    } catch (err) {
-      toast.error('Failed to delete workshop');
-    }
-  };
-  const handleDeleteMaterial = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this material?')) return;
-    try {
-      await api(`/api/workshop-materials/${id}`, { method: 'DELETE' });
-      toast.success('Material deleted successfully');
-      fetchData();
-    } catch (err) {
-      toast.error('Failed to delete material');
-    }
-  };
   const filteredMaterials = materials.filter(m => m.workshopId === activeWorkshopId);
-  const {
-    currentData: currentMaterials,
-    currentPage,
-    totalPages,
-    goToPage,
-    nextPage,
-    prevPage
-  } = usePagination(filteredMaterials, 10);
   const getStatusColor = (status?: string) => {
       switch (status) {
           case 'Available': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
@@ -153,34 +108,23 @@ export function WorkshopInventory() {
               </TabsList>
               {workshops.map(ws => (
                 <TabsContent key={ws.id} value={ws.id} className="space-y-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-muted/20 p-4 rounded-lg border">
-                    <div>
-                      <h3 className="font-semibold text-lg">{ws.name}</h3>
-                      <p className="text-sm text-muted-foreground">{ws.location} {ws.description && `- ${ws.description}`}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setEditingWorkshop(ws)}>
-                        <Pencil className="mr-2 h-4 w-4" /> Edit Workshop
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteWorkshop(ws.id)}>
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete Workshop
-                      </Button>
-                      <Dialog open={isNewMaterialOpen} onOpenChange={setNewMaterialOpen}>
-                        <DialogTrigger asChild>
-                          <Button size="sm">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add Material
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[600px]">
-                          <DialogHeader>
-                            <DialogTitle>Add to {ws.name}</DialogTitle>
-                            <DialogDescription>Enter details for new inventory item.</DialogDescription>
-                          </DialogHeader>
-                          <AddWorkshopMaterialForm workshopId={ws.id} onFinished={handleFormFinished} />
-                        </DialogContent>
-                      </Dialog>
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-muted-foreground">{ws.location} {ws.description && `- ${ws.description}`}</p>
+                    <Dialog open={isNewMaterialOpen} onOpenChange={setNewMaterialOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          Add Material
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[600px]">
+                        <DialogHeader>
+                          <DialogTitle>Add to {ws.name}</DialogTitle>
+                          <DialogDescription>Enter details for new inventory item.</DialogDescription>
+                        </DialogHeader>
+                        <AddWorkshopMaterialForm workshopId={ws.id} onFinished={handleFormFinished} />
+                      </DialogContent>
+                    </Dialog>
                   </div>
                   <div className="border rounded-md">
                     <Table>
@@ -197,8 +141,8 @@ export function WorkshopInventory() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {currentMaterials.length > 0 ? (
-                          currentMaterials.map((material) => (
+                        {filteredMaterials.length > 0 ? (
+                          filteredMaterials.map((material) => (
                             <TableRow key={material.id}>
                               <TableCell>
                                 {material.imageUrl ? (
@@ -241,9 +185,6 @@ export function WorkshopInventory() {
                                     <Button variant="ghost" size="sm" onClick={() => setMoveMaterial(material)}>
                                         <ArrowRightLeft className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm" onClick={() => handleDeleteMaterial(material.id)}>
-                                        <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                                    </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -258,13 +199,6 @@ export function WorkshopInventory() {
                       </TableBody>
                     </Table>
                   </div>
-                  <DataTablePagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={goToPage}
-                    onNext={nextPage}
-                    onPrevious={prevPage}
-                  />
                 </TabsContent>
               ))}
             </Tabs>
@@ -295,17 +229,6 @@ export function WorkshopInventory() {
           </DialogHeader>
           {editMaterial && (
             <EditWorkshopMaterialForm initialValues={editMaterial} onFinished={handleFormFinished} />
-          )}
-        </DialogContent>
-      </Dialog>
-      <Dialog open={!!editingWorkshop} onOpenChange={(open) => !open && setEditingWorkshop(null)}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle>Edit Workshop</DialogTitle>
-            <DialogDescription>Update workshop details.</DialogDescription>
-          </DialogHeader>
-          {editingWorkshop && (
-            <EditWorkshopForm initialValues={editingWorkshop} onFinished={handleFormFinished} />
           )}
         </DialogContent>
       </Dialog>

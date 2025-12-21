@@ -1,26 +1,18 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { api } from '@/lib/api-client';
-import type { Project, Expense, Deposit, ProgressPhoto, Task, TaskStatus, Invoice, Quote, ConstructionStage } from '@shared/types';
+import type { Project, Expense, Deposit, ProgressPhoto, Task, TaskStatus, Invoice, Quote } from '@shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Share2, Copy, FileText, ExternalLink, MapPin, Calculator, Pencil, Trash2, Download } from 'lucide-react';
+import { PlusCircle, Share2, Copy, FileText, ExternalLink, MapPin, Calculator } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { AddExpenseForm } from '@/components/AddExpenseForm';
-import { EditExpenseForm } from '@/components/EditExpenseForm';
 import { ProjectDeposits } from '@/components/ProjectDeposits';
 import { ProjectPhotos } from '@/components/ProjectPhotos';
 import { ProjectTasks } from '@/components/ProjectTasks';
@@ -39,39 +31,27 @@ import { EditProjectForm } from '@/components/EditProjectForm';
 import { ProjectMaterials } from '@/components/ProjectMaterials';
 import { ProjectResources } from '@/components/ProjectResources';
 import { UnusedMaterialsReport } from '@/components/UnusedMaterialsReport';
-import { ProjectAreasManager } from '@/components/ProjectAreasManager';
-import { calculateProjectFinancials, calculateTotalExpense, exportToCsv } from '@/lib/utils';
-import { useCurrency } from '@/hooks/useCurrency';
-import { usePagination } from '@/hooks/usePagination';
-import { DataTablePagination } from '@/components/DataTablePagination';
-import { ProjectCostReportDialog } from '@/components/ProjectCostReportDialog';
+import { calculateProjectFinancials, calculateTotalExpense } from '@/lib/utils';
+const formatCurrency = (amountInCents: number) => {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amountInCents / 100);
+};
 export function ProjectPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [stages, setStages] = useState<ConstructionStage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddExpenseOpen, setAddExpenseOpen] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isQuickQuoteOpen, setQuickQuoteOpen] = useState(false);
   const [isCreateInvoiceOpen, setCreateInvoiceOpen] = useState(false);
   const [isEditProjectOpen, setEditProjectOpen] = useState(false);
-  const [isCostReportOpen, setIsCostReportOpen] = useState(false);
-  const [areaFilter, setAreaFilter] = useState<string>('all');
-  const [stageFilter, setStageFilter] = useState<string>('all');
   const clientPortalLink = `${window.location.origin}/portal/${id}`;
-  const { formatCurrency } = useCurrency();
   const fetchProjectData = useCallback(async () => {
     if (!id) return;
     try {
-      const [projectData, stagesData] = await Promise.all([
-        api<Project>(`/api/projects/${id}`),
-        api<ConstructionStage[]>('/api/construction-stages')
-      ]);
+      const projectData = await api<Project>(`/api/projects/${id}`);
       setProject(projectData);
-      setStages(stagesData);
       if (projectData.invoiceIds && projectData.invoiceIds.length > 0) {
         const invoicePromises = projectData.invoiceIds.map(invoiceId => api<Invoice>(`/api/invoices/${invoiceId}`));
         const invoiceResults = await Promise.all(invoicePromises);
@@ -90,34 +70,6 @@ export function ProjectPage() {
     setIsLoading(true);
     fetchProjectData();
   }, [fetchProjectData]);
-  // Pagination for Expenses with Area and Stage Filtering
-  const filteredExpenses = useMemo(() => {
-    let expenses = project?.expenses || [];
-    if (areaFilter !== 'all') {
-      expenses = expenses.filter(e => e.areaId === areaFilter);
-    }
-    if (stageFilter !== 'all') {
-      expenses = expenses.filter(e => e.workStage === stageFilter);
-    }
-    return expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [project?.expenses, areaFilter, stageFilter]);
-  const {
-    currentData: currentExpenses,
-    currentPage: expensesPage,
-    totalPages: expensesTotalPages,
-    goToPage: goToExpensesPage,
-    nextPage: nextExpensesPage,
-    prevPage: prevExpensesPage
-  } = usePagination(filteredExpenses, 10);
-  // Pagination for Invoices
-  const {
-    currentData: currentInvoices,
-    currentPage: invoicesPage,
-    totalPages: invoicesTotalPages,
-    goToPage: goToInvoicesPage,
-    nextPage: nextInvoicesPage,
-    prevPage: prevInvoicesPage
-  } = usePagination(invoices, 5);
   const handleAddExpense = async (values: Omit<Expense, 'id'>) => {
     if (!id) return;
     try {
@@ -126,31 +78,6 @@ export function ProjectPage() {
       fetchProjectData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add expense.');
-    }
-  };
-  const handleUpdateExpense = async (values: Omit<Expense, 'id'>) => {
-    if (!id || !editingExpense) return;
-    try {
-      await api(`/api/projects/${id}/expenses/${editingExpense.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(values),
-      });
-      toast.success('Expense updated successfully!');
-      setEditingExpense(null);
-      fetchProjectData();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update expense.');
-    }
-  };
-  const handleDeleteExpense = async (expenseId: string) => {
-    if (!id) return;
-    if (!window.confirm('Are you sure you want to delete this expense?')) return;
-    try {
-      await api(`/api/projects/${id}/expenses/${expenseId}`, { method: 'DELETE' });
-      toast.success('Expense deleted successfully');
-      fetchProjectData();
-    } catch (err) {
-      toast.error('Failed to delete expense');
     }
   };
   const handleAddDeposit = async (values: Omit<Deposit, 'id'>) => {
@@ -222,31 +149,6 @@ export function ProjectPage() {
       toast.error('Failed to convert quote');
     }
   };
-  const handleExportExpenses = () => {
-    if (!project || !project.expenses || project.expenses.length === 0) {
-      toast.error('No expenses to export.');
-      return;
-    }
-    // Export filtered expenses if a filter is active, otherwise all
-    const expensesToExport = (areaFilter !== 'all' || stageFilter !== 'all') ? filteredExpenses : project.expenses;
-    const data = expensesToExport.map(exp => {
-      const total = calculateTotalExpense(exp);
-      const taxAmount = total - exp.amount;
-      return {
-        Date: new Date(exp.date).toLocaleDateString(),
-        Description: exp.description,
-        Category: exp.category,
-        'Subtotal ($)': (exp.amount / 100).toFixed(2),
-        'Tax ($)': (taxAmount / 100).toFixed(2),
-        'Total ($)': (total / 100).toFixed(2),
-        'Work Stage': exp.workStage || '',
-        'Area': exp.areaName || '',
-        'Invoiced': exp.invoiced ? 'Yes' : 'No'
-      };
-    });
-    exportToCsv(`${project.name.replace(/\s+/g, '_')}_BOM.csv`, data);
-    toast.success('BOM exported successfully!');
-  };
   const copyLink = () => {
     navigator.clipboard.writeText(clientPortalLink);
     toast.success('Client portal link copied!');
@@ -281,9 +183,6 @@ export function ProjectPage() {
             <p className="text-lg text-muted-foreground">Client: {project.clientName}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsCostReportOpen(true)}>
-              <FileText className="mr-2 h-4 w-4" /> Cost Report
-            </Button>
             <Dialog open={isQuickQuoteOpen} onOpenChange={setQuickQuoteOpen}>
               <DialogTrigger asChild>
                 <Button variant="secondary"><Calculator className="mr-2 h-4 w-4" /> Quick Quote / Change Order</Button>
@@ -387,90 +286,16 @@ export function ProjectPage() {
                   </CardContent>
                 </Card>
               </div>
-              {/* Project Areas */}
-              <ProjectAreasManager project={project} onUpdate={fetchProjectData} />
               {/* Detailed Content */}
               <div className="grid gap-6 lg:grid-cols-5">
                 <div className="lg:col-span-3 space-y-6">
                   <Card>
-                    <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <CardHeader className="flex flex-row items-center justify-between">
                       <div><CardTitle>Bill of Materials (BOM)</CardTitle><CardDescription>Detailed list of all project expenses.</CardDescription></div>
-                      <div className="flex flex-wrap gap-2">
-                        <Select value={stageFilter} onValueChange={setStageFilter}>
-                          <SelectTrigger className="w-[160px] h-9">
-                            <SelectValue placeholder="Filter by Stage" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Stages</SelectItem>
-                            {stages.map(stage => (
-                              <SelectItem key={stage.id} value={stage.name}>{stage.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={areaFilter} onValueChange={setAreaFilter}>
-                          <SelectTrigger className="w-[160px] h-9">
-                            <SelectValue placeholder="Filter by Area" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Areas</SelectItem>
-                            {(project.areas || []).map(area => (
-                              <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button variant="outline" size="sm" onClick={handleExportExpenses}>
-                          <Download className="mr-2 h-4 w-4" /> Export CSV
-                        </Button>
-                        <Dialog open={isAddExpenseOpen} onOpenChange={setAddExpenseOpen}><DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" />Add Expense</Button></DialogTrigger><DialogContent className="sm:max-w-[480px]"><DialogHeader><DialogTitle>Add New Expense</DialogTitle><DialogDescription>Log a new cost against the project budget.</DialogDescription></DialogHeader><AddExpenseForm areas={project.areas} projectId={project.id} onSubmit={handleAddExpense} onFinished={() => setAddExpenseOpen(false)} /></DialogContent></Dialog>
-                      </div>
+                      <Dialog open={isAddExpenseOpen} onOpenChange={setAddExpenseOpen}><DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" />Add Expense</Button></DialogTrigger><DialogContent className="sm:max-w-[480px]"><DialogHeader><DialogTitle>Add New Expense</DialogTitle><DialogDescription>Log a new cost against the project budget.</DialogDescription></DialogHeader><AddExpenseForm onSubmit={handleAddExpense} onFinished={() => setAddExpenseOpen(false)} /></DialogContent></Dialog>
                     </CardHeader>
                     <CardContent>
-                      <TooltipProvider>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Description</TableHead>
-                              <TableHead>Category</TableHead>
-                              <TableHead className="text-right">Amount</TableHead>
-                              <TableHead className="w-[100px] text-right">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {currentExpenses.length > 0 ? (currentExpenses.map((expense: Expense) => (
-                              <TableRow key={expense.id}>
-                                <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
-                                <TableCell>
-                                  <div>
-                                    {expense.description}
-                                    {expense.workStage && (<Badge variant="outline" className="ml-2">{expense.workStage}</Badge>)}
-                                    {expense.areaName && (<Badge variant="secondary" className="ml-2 text-[10px]">{expense.areaName}</Badge>)}
-                                  </div>
-                                </TableCell>
-                                <TableCell><Badge variant="secondary">{expense.category}</Badge></TableCell>
-                                <TableCell className="text-right font-medium"><Tooltip><TooltipTrigger asChild><span>{formatCurrency(calculateTotalExpense(expense))}</span></TooltipTrigger><TooltipContent><div className="p-1 text-sm"><div className="flex justify-between gap-4"><span>Subtotal:</span><span>{formatCurrency(expense.amount)}</span></div>{(expense.taxes ?? []).map(tax => (<div key={tax.id} className="flex justify-between gap-4"><span>{tax.name} ({tax.rate}%):</span><span>{formatCurrency(expense.amount * (tax.rate / 100))}</span></div>))}</div></TooltipContent></Tooltip></TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex justify-end gap-1">
-                                    <Button variant="ghost" size="icon" onClick={() => setEditingExpense(expense)}>
-                                      <Pencil className="h-4 w-4 text-muted-foreground" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(expense.id)}>
-                                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))) : (<TableRow><TableCell colSpan={5} className="text-center h-24">No expenses logged yet.</TableCell></TableRow>)}
-                          </TableBody>
-                        </Table>
-                        <DataTablePagination
-                          currentPage={expensesPage}
-                          totalPages={expensesTotalPages}
-                          onPageChange={goToExpensesPage}
-                          onNext={nextExpensesPage}
-                          onPrevious={prevExpensesPage}
-                        />
-                      </TooltipProvider>
+                      <TooltipProvider><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Category</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader><TableBody>{(project.expenses || []).length > 0 ? ((project.expenses || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((expense: Expense) => (<TableRow key={expense.id}><TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell><TableCell><div>{expense.description}{expense.category === 'Materials' && expense.workStage && (<Badge variant="outline" className="ml-2">{expense.workStage}</Badge>)}</div></TableCell><TableCell><Badge variant="secondary">{expense.category}</Badge></TableCell><TableCell className="text-right font-medium"><Tooltip><TooltipTrigger asChild><span>{formatCurrency(calculateTotalExpense(expense))}</span></TooltipTrigger><TooltipContent><div className="p-1 text-sm"><div className="flex justify-between gap-4"><span>Subtotal:</span><span>{formatCurrency(expense.amount)}</span></div>{(expense.taxes ?? []).map(tax => (<div key={tax.id} className="flex justify-between gap-4"><span>{tax.name} ({tax.rate}%):</span><span>{formatCurrency(expense.amount * (tax.rate / 100))}</span></div>))}</div></TooltipContent></Tooltip></TableCell></TableRow>))) : (<TableRow><TableCell colSpan={4} className="text-center h-24">No expenses logged yet.</TableCell></TableRow>)}</TableBody></Table></TooltipProvider>
                     </CardContent>
                   </Card>
                   <Card>
@@ -480,7 +305,7 @@ export function ProjectPage() {
                 </div>
                 <div className="lg:col-span-2 space-y-6">
                   <ProjectDeposits deposits={project.deposits ?? []} onAddDeposit={handleAddDeposit} />
-                  <ProjectTasks tasks={project.tasks ?? []} areas={project.areas} projectId={project.id} onAddTask={handleAddTask} onUpdateTaskStatus={handleUpdateTaskStatus} />
+                  <ProjectTasks tasks={project.tasks ?? []} onAddTask={handleAddTask} onUpdateTaskStatus={handleUpdateTaskStatus} />
                 </div>
               </div>
             </div>
@@ -515,15 +340,8 @@ export function ProjectPage() {
               <CardContent>
                 <Table>
                   <TableHeader><TableRow><TableHead>Invoice #</TableHead><TableHead>Issue Date</TableHead><TableHead>Due Date</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
-                  <TableBody>{currentInvoices.length > 0 ? (currentInvoices.map(invoice => (<TableRow key={invoice.id} onClick={() => navigate(`/invoices/${invoice.id}`)} className="cursor-pointer hover:bg-muted/50"><TableCell className="font-medium">{invoice.invoiceNumber}</TableCell><TableCell>{new Date(invoice.issueDate).toLocaleDateString()}</TableCell><TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell><TableCell><Badge>{invoice.status}</Badge></TableCell><TableCell className="text-right font-mono">{formatCurrency(invoice.total)}</TableCell></TableRow>))) : (<TableRow><TableCell colSpan={5} className="text-center h-24">No invoices for this project yet.</TableCell></TableRow>)}</TableBody>
+                  <TableBody>{invoices.length > 0 ? (invoices.map(invoice => (<TableRow key={invoice.id} onClick={() => navigate(`/invoices/${invoice.id}`)} className="cursor-pointer hover:bg-muted/50"><TableCell className="font-medium">{invoice.invoiceNumber}</TableCell><TableCell>{new Date(invoice.issueDate).toLocaleDateString()}</TableCell><TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell><TableCell><Badge>{invoice.status}</Badge></TableCell><TableCell className="text-right font-mono">{formatCurrency(invoice.total)}</TableCell></TableRow>))) : (<TableRow><TableCell colSpan={5} className="text-center h-24">No invoices for this project yet.</TableCell></TableRow>)}</TableBody>
                 </Table>
-                <DataTablePagination
-                  currentPage={invoicesPage}
-                  totalPages={invoicesTotalPages}
-                  onPageChange={goToInvoicesPage}
-                  onNext={nextInvoicesPage}
-                  onPrevious={prevInvoicesPage}
-                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -538,28 +356,6 @@ export function ProjectPage() {
           </TabsContent>
         </Tabs>
       </div>
-      <Dialog open={!!editingExpense} onOpenChange={(open) => !open && setEditingExpense(null)}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle>Edit Expense</DialogTitle>
-            <DialogDescription>Modify the details of this expense.</DialogDescription>
-          </DialogHeader>
-          {editingExpense && (
-            <EditExpenseForm
-              initialValues={editingExpense}
-              areas={project.areas}
-              projectId={project.id}
-              onSubmit={handleUpdateExpense}
-              onFinished={() => setEditingExpense(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-      <ProjectCostReportDialog
-        project={project}
-        open={isCostReportOpen}
-        onOpenChange={setIsCostReportOpen}
-      />
       <Toaster richColors />
     </AppLayout>
   );

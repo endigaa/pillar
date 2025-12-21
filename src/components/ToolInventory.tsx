@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { PlusCircle, ArrowRightLeft, Pencil, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { PlusCircle, ArrowRightLeft, Pencil, Image as ImageIcon } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { Tool } from '@shared/types';
 import { AddToolForm } from './AddToolForm';
@@ -13,8 +13,6 @@ import { MoveToolDialog } from './MoveToolDialog';
 import { Toaster, toast } from '@/components/ui/sonner';
 import { Badge } from './ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { usePagination } from '@/hooks/usePagination';
-import { DataTablePagination } from '@/components/DataTablePagination';
 export function ToolInventory() {
   const [tools, setTools] = useState<Tool[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,14 +33,6 @@ export function ToolInventory() {
   useEffect(() => {
     fetchTools();
   }, [fetchTools]);
-  const {
-    currentData: currentTools,
-    currentPage,
-    totalPages,
-    goToPage,
-    nextPage,
-    prevPage
-  } = usePagination(tools, 10);
   const handleCreateTool = async (values: Omit<Tool, 'id'>) => {
     try {
       await api('/api/tools', {
@@ -53,16 +43,6 @@ export function ToolInventory() {
       fetchTools();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add tool.');
-    }
-  };
-  const handleDeleteTool = async (toolId: string) => {
-    if (!window.confirm('Are you sure you want to delete this tool?')) return;
-    try {
-      await api(`/api/tools/${toolId}`, { method: 'DELETE' });
-      toast.success('Tool deleted successfully');
-      fetchTools();
-    } catch (err) {
-      toast.error('Failed to delete tool');
     }
   };
   const handleMoveFinished = () => {
@@ -123,8 +103,8 @@ export function ToolInventory() {
                     <TableCell><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : currentTools.length > 0 ? (
-                currentTools.map((tool) => (
+              ) : tools.length > 0 ? (
+                tools.map((tool) => (
                   <TableRow key={tool.id}>
                     <TableCell>
                         {tool.imageUrl ? (
@@ -165,9 +145,6 @@ export function ToolInventory() {
                             <Button variant="ghost" size="sm" onClick={() => setMoveTool(tool)}>
                                 <ArrowRightLeft className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDeleteTool(tool.id)}>
-                                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                            </Button>
                         </div>
                     </TableCell>
                   </TableRow>
@@ -181,13 +158,6 @@ export function ToolInventory() {
               )}
             </TableBody>
           </Table>
-          <DataTablePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={goToPage}
-            onNext={nextPage}
-            onPrevious={prevPage}
-          />
         </CardContent>
       </Card>
       <Dialog open={!!moveTool} onOpenChange={(open) => !open && setMoveTool(null)}>
