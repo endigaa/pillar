@@ -95,3 +95,20 @@ You can deploy this project with a single click using the button below.
     bun deploy
     ```
 Wrangler will handle the process of uploading the assets and the worker script, making your application live on your configured `*.workers.dev` subdomain or custom domain.
+## Troubleshooting
+### Git Clone Error: "could not determine hash algorithm"
+If you encounter the error `fatal: not valid: could not determine hash algorithm; is this a git repository?` when trying to clone or pull the repository, it typically indicates a mismatch between the Git version used to create the repository and your local Git version.
+**Solution:**
+1.  **Update Git**: Ensure you are using a recent version of Git (v2.29 or later).
+    -   **Mac**: `brew upgrade git`
+    -   **Windows**: Download the latest installer from [git-scm.com](https://git-scm.com/).
+    -   **Linux**: Use your package manager (e.g., `sudo apt update && sudo apt install git`).
+2.  **Re-clone**: After updating, try cloning the repository again.
+### "Is there a reedy?" (README)
+Yes, this file serves as the central documentation (README) for the project. It covers:
+-   **Key Features**: What the application does.
+-   **Technology Stack**: The tools used to build it.
+-   **Getting Started**: How to install and run the app locally.
+-   **Project Structure**: Where to find code files.
+-   **Deployment**: How to publish the app.
+If you have further questions, please refer to the "Help & Guide" page within the application itself (accessible via the sidebar) for a detailed user manual.
