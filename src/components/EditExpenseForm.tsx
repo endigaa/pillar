@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import type { Expense, ExpenseCategory, Personnel } from '@shared/types';
+import type { Expense, ExpenseCategory, Personnel, ConstructionStage } from '@shared/types';
 import { Separator } from './ui/separator';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -63,18 +63,22 @@ interface EditExpenseFormProps {
 export function EditExpenseForm({ initialValues, onSubmit, onFinished }: EditExpenseFormProps) {
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [stages, setStages] = useState<ConstructionStage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewCategoryOpen, setIsNewCategoryOpen] = useState(false);
   const [isNewPersonnelOpen, setIsNewPersonnelOpen] = useState(false);
+  const [isNewStageOpen, setIsNewStageOpen] = useState(false);
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [catData, personnelData] = await Promise.all([
+        const [catData, personnelData, stagesData] = await Promise.all([
           api<ExpenseCategory[]>('/api/expense-categories'),
           api<Personnel[]>('/api/personnel'),
+          api<ConstructionStage[]>('/api/construction-stages'),
         ]);
         setCategories(catData);
         setPersonnel(personnelData);
+        setStages(stagesData);
       } catch (err) {
         toast.error('Failed to load form data.');
       } finally {
@@ -145,6 +149,20 @@ export function EditExpenseForm({ initialValues, onSubmit, onFinished }: EditExp
       toast.success('Personnel created and selected!');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create personnel.');
+    }
+  };
+  const handleCreateStage = async (name: string) => {
+    try {
+      const newStage = await api<ConstructionStage>('/api/construction-stages', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      });
+      setStages(prev => [...prev, newStage]);
+      form.setValue('workStage', newStage.name);
+      setIsNewStageOpen(false);
+      toast.success('Stage created and selected!');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create stage.');
     }
   };
   return (
@@ -241,7 +259,39 @@ export function EditExpenseForm({ initialValues, onSubmit, onFinished }: EditExp
                   )}
                 />
               </div>
-              <FormField control={form.control} name="workStage" render={({ field }) => (<FormItem><FormLabel>Work Stage (Optional)</FormLabel><FormControl><Input placeholder="e.g., Framing, Foundation" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField
+                control={form.control}
+                name="workStage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Work Stage (Optional)</FormLabel>
+                    <div className="flex gap-2">
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                        <FormControl>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder={isLoading ? "Loading..." : "Select a stage"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {stages.map((stage) => (
+                            <SelectItem key={stage.id} value={stage.name}>{stage.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setIsNewStageOpen(true)}
+                        title="Add New Stage"
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </>
           )}
           <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date of Expense</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('w-full pl-3 text-left font-normal',!field.value && 'text-muted-foreground')}>{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date('1900-01-01')} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
@@ -339,6 +389,20 @@ export function EditExpenseForm({ initialValues, onSubmit, onFinished }: EditExp
           <AddPersonnelForm
             onSubmit={handleCreatePersonnel}
             onFinished={() => {}} // Dialog closes via state in handleCreatePersonnel
+          />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isNewStageOpen} onOpenChange={setIsNewStageOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Add Construction Stage</DialogTitle>
+            <DialogDescription>Create a new stage for project tracking.</DialogDescription>
+          </DialogHeader>
+          <SimpleCategoryForm
+            onSubmit={handleCreateStage}
+            onCancel={() => setIsNewStageOpen(false)}
+            label="Stage Name"
+            placeholder="e.g., Demolition"
           />
         </DialogContent>
       </Dialog>

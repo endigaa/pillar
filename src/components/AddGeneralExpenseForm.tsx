@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, PlusCircle } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Select,
@@ -28,6 +28,8 @@ import { format } from 'date-fns';
 import type { GeneralExpense, ExpenseCategory } from '@shared/types';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { SimpleCategoryForm } from './SimpleCategoryForm';
 const generalExpenseFormSchema = z.object({
   description: z.string().min(3, { message: 'Description must be at least 3 characters.' }),
   amount: z.number().positive({ message: 'Amount must be a positive number.' }),
@@ -42,6 +44,7 @@ interface AddGeneralExpenseFormProps {
 export function AddGeneralExpenseForm({ onSubmit, onFinished }: AddGeneralExpenseFormProps) {
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isNewCategoryOpen, setIsNewCategoryOpen] = useState(false);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -74,63 +77,104 @@ export function AddGeneralExpenseForm({ onSubmit, onFinished }: AddGeneralExpens
     await onSubmit(expenseData);
     onFinished();
   };
+  const handleCreateCategory = async (name: string) => {
+    try {
+      const newCategory = await api<ExpenseCategory>('/api/expense-categories', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      });
+      setCategories(prev => [...prev, newCategory]);
+      form.setValue('category', newCategory.name);
+      setIsNewCategoryOpen(false);
+      toast.success('Category created and selected!');
+    } catch (err) {
+      toast.error('Failed to create category.');
+    }
+  };
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
-        <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="e.g., QuickBooks Subscription" {...field} /></FormControl><FormMessage /></FormItem>)} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount ($)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="50.00"
-                      {...field}
-                      onChange={e => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value || ''}
-                    disabled={isLoading}
-                  >
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+          <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="e.g., QuickBooks Subscription" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount ($)</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={isLoading ? "Loading..." : "Select a category"} />
-                      </SelectTrigger>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="50.00"
+                        {...field}
+                        onChange={e => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                      />
                     </FormControl>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-        </div>
-        <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date of Expense</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('w-full pl-3 text-left font-normal',!field.value && 'text-muted-foreground')}>{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date('1900-01-01')} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
-        <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onFinished} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting || isLoading}>{(isSubmitting || isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Add Expense</Button>
-        </div>
-      </form>
-    </Form>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <div className="flex gap-2">
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || ''}
+                        disabled={isLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder={isLoading ? "Loading..." : "Select a category"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setIsNewCategoryOpen(true)}
+                        title="Add New Category"
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+          </div>
+          <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date of Expense</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('w-full pl-3 text-left font-normal',!field.value && 'text-muted-foreground')}>{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date('1900-01-01')} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+          <div className="flex justify-end space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={onFinished} disabled={isSubmitting}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting || isLoading}>{(isSubmitting || isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Add Expense</Button>
+          </div>
+        </form>
+      </Form>
+      <Dialog open={isNewCategoryOpen} onOpenChange={setIsNewCategoryOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Add Expense Category</DialogTitle>
+            <DialogDescription>Create a new category for organizing expenses.</DialogDescription>
+          </DialogHeader>
+          <SimpleCategoryForm
+            onSubmit={handleCreateCategory}
+            onCancel={() => setIsNewCategoryOpen(false)}
+            label="Category Name"
+            placeholder="e.g., Travel, Equipment"
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
