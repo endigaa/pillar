@@ -6,6 +6,7 @@ import { WorkshopInventory } from '@/components/WorkshopInventory';
 import { PersonnelManagement } from '@/components/PersonnelManagement';
 import { DocumentTemplates } from '@/components/DocumentTemplates';
 import { ProjectTemplateManager } from '@/components/ProjectTemplateManager';
+import { ResourceAvailability } from '@/components/ResourceAvailability';
 export function ResourceManagementPage() {
   return (
     <AppLayout>
@@ -14,8 +15,9 @@ export function ResourceManagementPage() {
           <h1 className="text-3xl md:text-4xl font-bold">Resource Management</h1>
           <p className="text-muted-foreground">Manage your tools, sub-contractors, workshop inventory, personnel, and documents.</p>
         </div>
-        <Tabs defaultValue="tools" className="space-y-4">
+        <Tabs defaultValue="availability" className="space-y-4">
           <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="availability">Availability</TabsTrigger>
             <TabsTrigger value="tools">Tool Inventory</TabsTrigger>
             <TabsTrigger value="subcontractors">Sub-contractors</TabsTrigger>
             <TabsTrigger value="workshop">Workshop Inventory</TabsTrigger>
@@ -23,6 +25,9 @@ export function ResourceManagementPage() {
             <TabsTrigger value="plan-templates">Plan Templates</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
           </TabsList>
+          <TabsContent value="availability">
+            <ResourceAvailability />
+          </TabsContent>
           <TabsContent value="tools">
             <ToolInventory />
           </TabsContent>

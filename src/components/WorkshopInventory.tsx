@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { PlusCircle, ArrowRightLeft, Warehouse, Pencil, Image as ImageIcon } from 'lucide-react';
+import { PlusCircle, ArrowRightLeft, Warehouse, Pencil, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { WorkshopMaterial, Workshop } from '@shared/types';
 import { Toaster, toast } from '@/components/ui/sonner';
@@ -13,6 +13,7 @@ import { AddWorkshopForm } from './AddWorkshopForm';
 import { MoveInventoryForm } from './MoveInventoryForm';
 import { EditWorkshopMaterialForm } from './EditWorkshopMaterialForm';
 import { AddWorkshopMaterialForm } from './AddWorkshopMaterialForm';
+import { EditWorkshopForm } from './EditWorkshopForm';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 const formatCurrency = (amountInCents: number) => {
@@ -30,6 +31,7 @@ export function WorkshopInventory() {
   const [isNewWorkshopOpen, setNewWorkshopOpen] = useState(false);
   const [moveMaterial, setMoveMaterial] = useState<WorkshopMaterial | null>(null);
   const [editMaterial, setEditMaterial] = useState<WorkshopMaterial | null>(null);
+  const [editingWorkshop, setEditingWorkshop] = useState<Workshop | null>(null);
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -39,8 +41,13 @@ export function WorkshopInventory() {
       ]);
       setWorkshops(wsData);
       setMaterials(matData);
-      if (wsData.length > 0 && !activeWorkshopId) {
-        setActiveWorkshopId(wsData[0].id);
+      // Ensure activeWorkshopId is valid
+      if (wsData.length > 0) {
+        if (!activeWorkshopId || !wsData.find(w => w.id === activeWorkshopId)) {
+          setActiveWorkshopId(wsData[0].id);
+        }
+      } else {
+        setActiveWorkshopId('');
       }
     } catch (err) {
       toast.error('Failed to fetch inventory data');
@@ -56,7 +63,37 @@ export function WorkshopInventory() {
     setNewWorkshopOpen(false);
     setMoveMaterial(null);
     setEditMaterial(null);
+    setEditingWorkshop(null);
     fetchData();
+  };
+  const handleDeleteWorkshop = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this workshop? All materials inside will also be deleted.')) return;
+    try {
+      await api(`/api/workshops/${id}`, { method: 'DELETE' });
+      toast.success('Workshop deleted successfully');
+      // If we deleted the active workshop, the fetchData effect will handle resetting the active ID
+      // But we can optimistically update local state to prevent UI flicker
+      const remaining = workshops.filter(w => w.id !== id);
+      setWorkshops(remaining);
+      if (activeWorkshopId === id && remaining.length > 0) {
+        setActiveWorkshopId(remaining[0].id);
+      } else if (remaining.length === 0) {
+        setActiveWorkshopId('');
+      }
+      fetchData(); // Full refresh to sync materials
+    } catch (err) {
+      toast.error('Failed to delete workshop');
+    }
+  };
+  const handleDeleteMaterial = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this material?')) return;
+    try {
+      await api(`/api/workshop-materials/${id}`, { method: 'DELETE' });
+      toast.success('Material deleted successfully');
+      fetchData();
+    } catch (err) {
+      toast.error('Failed to delete material');
+    }
   };
   const filteredMaterials = materials.filter(m => m.workshopId === activeWorkshopId);
   const getStatusColor = (status?: string) => {
@@ -108,23 +145,34 @@ export function WorkshopInventory() {
               </TabsList>
               {workshops.map(ws => (
                 <TabsContent key={ws.id} value={ws.id} className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-muted-foreground">{ws.location} {ws.description && `- ${ws.description}`}</p>
-                    <Dialog open={isNewMaterialOpen} onOpenChange={setNewMaterialOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="sm">
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          Add Material
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[600px]">
-                        <DialogHeader>
-                          <DialogTitle>Add to {ws.name}</DialogTitle>
-                          <DialogDescription>Enter details for new inventory item.</DialogDescription>
-                        </DialogHeader>
-                        <AddWorkshopMaterialForm workshopId={ws.id} onFinished={handleFormFinished} />
-                      </DialogContent>
-                    </Dialog>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-muted/20 p-4 rounded-lg border">
+                    <div>
+                      <h3 className="font-semibold text-lg">{ws.name}</h3>
+                      <p className="text-sm text-muted-foreground">{ws.location} {ws.description && `- ${ws.description}`}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setEditingWorkshop(ws)}>
+                        <Pencil className="mr-2 h-4 w-4" /> Edit Workshop
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteWorkshop(ws.id)}>
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete Workshop
+                      </Button>
+                      <Dialog open={isNewMaterialOpen} onOpenChange={setNewMaterialOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add Material
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[600px]">
+                          <DialogHeader>
+                            <DialogTitle>Add to {ws.name}</DialogTitle>
+                            <DialogDescription>Enter details for new inventory item.</DialogDescription>
+                          </DialogHeader>
+                          <AddWorkshopMaterialForm workshopId={ws.id} onFinished={handleFormFinished} />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
                   <div className="border rounded-md">
                     <Table>
@@ -185,6 +233,9 @@ export function WorkshopInventory() {
                                     <Button variant="ghost" size="sm" onClick={() => setMoveMaterial(material)}>
                                         <ArrowRightLeft className="h-4 w-4" />
                                     </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => handleDeleteMaterial(material.id)}>
+                                        <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                                    </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -229,6 +280,17 @@ export function WorkshopInventory() {
           </DialogHeader>
           {editMaterial && (
             <EditWorkshopMaterialForm initialValues={editMaterial} onFinished={handleFormFinished} />
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!editingWorkshop} onOpenChange={(open) => !open && setEditingWorkshop(null)}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Edit Workshop</DialogTitle>
+            <DialogDescription>Update workshop details.</DialogDescription>
+          </DialogHeader>
+          {editingWorkshop && (
+            <EditWorkshopForm initialValues={editingWorkshop} onFinished={handleFormFinished} />
           )}
         </DialogContent>
       </Dialog>
