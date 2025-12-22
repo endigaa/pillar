@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { PlusCircle, ArrowRightLeft, Pencil, Image as ImageIcon } from 'lucide-react';
+import { PlusCircle, ArrowRightLeft, Pencil, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { Tool } from '@shared/types';
 import { AddToolForm } from './AddToolForm';
@@ -43,6 +43,16 @@ export function ToolInventory() {
       fetchTools();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add tool.');
+    }
+  };
+  const handleDeleteTool = async (toolId: string) => {
+    if (!window.confirm('Are you sure you want to delete this tool?')) return;
+    try {
+      await api(`/api/tools/${toolId}`, { method: 'DELETE' });
+      toast.success('Tool deleted successfully');
+      fetchTools();
+    } catch (err) {
+      toast.error('Failed to delete tool');
     }
   };
   const handleMoveFinished = () => {
@@ -144,6 +154,9 @@ export function ToolInventory() {
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => setMoveTool(tool)}>
                                 <ArrowRightLeft className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteTool(tool.id)}>
+                                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                             </Button>
                         </div>
                     </TableCell>

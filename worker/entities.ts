@@ -90,6 +90,12 @@ export class ProjectEntity extends IndexedEntity<Project> {
     });
     return updatedExpense;
   }
+  async deleteExpense(expenseId: string): Promise<void> {
+    await this.mutate(s => ({
+      ...s,
+      expenses: s.expenses.filter(e => e.id !== expenseId),
+    }));
+  }
   async addDeposit(deposit: Omit<Deposit, 'id'>): Promise<Deposit> {
     const newDeposit: Deposit = { ...deposit, id: crypto.randomUUID() };
     await this.mutate(s => ({
@@ -143,6 +149,12 @@ export class ProjectEntity extends IndexedEntity<Project> {
       return { ...s, tasks: newTasks };
     });
     return updatedTask;
+  }
+  async deleteTask(taskId: string): Promise<void> {
+    await this.mutate(s => ({
+      ...s,
+      tasks: s.tasks.filter(t => t.id !== taskId),
+    }));
   }
   async addClientDocument(doc: Omit<ClientDocument, 'id' | 'uploadedAt'>): Promise<ClientDocument> {
     const newDocument: ClientDocument = {

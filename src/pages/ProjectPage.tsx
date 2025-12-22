@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Share2, Copy, FileText, ExternalLink, MapPin, Calculator, Pencil } from 'lucide-react';
+import { PlusCircle, Share2, Copy, FileText, ExternalLink, MapPin, Calculator, Pencil, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
@@ -33,9 +33,7 @@ import { ProjectMaterials } from '@/components/ProjectMaterials';
 import { ProjectResources } from '@/components/ProjectResources';
 import { UnusedMaterialsReport } from '@/components/UnusedMaterialsReport';
 import { calculateProjectFinancials, calculateTotalExpense } from '@/lib/utils';
-const formatCurrency = (amountInCents: number) => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amountInCents / 100);
-};
+import { useCurrency } from '@/hooks/useCurrency';
 export function ProjectPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -49,6 +47,7 @@ export function ProjectPage() {
   const [isCreateInvoiceOpen, setCreateInvoiceOpen] = useState(false);
   const [isEditProjectOpen, setEditProjectOpen] = useState(false);
   const clientPortalLink = `${window.location.origin}/portal/${id}`;
+  const { formatCurrency } = useCurrency();
   const fetchProjectData = useCallback(async () => {
     if (!id) return;
     try {
@@ -94,6 +93,17 @@ export function ProjectPage() {
       fetchProjectData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update expense.');
+    }
+  };
+  const handleDeleteExpense = async (expenseId: string) => {
+    if (!id) return;
+    if (!window.confirm('Are you sure you want to delete this expense?')) return;
+    try {
+      await api(`/api/projects/${id}/expenses/${expenseId}`, { method: 'DELETE' });
+      toast.success('Expense deleted successfully');
+      fetchProjectData();
+    } catch (err) {
+      toast.error('Failed to delete expense');
     }
   };
   const handleAddDeposit = async (values: Omit<Deposit, 'id'>) => {
@@ -319,7 +329,7 @@ export function ProjectPage() {
                               <TableHead>Description</TableHead>
                               <TableHead>Category</TableHead>
                               <TableHead className="text-right">Amount</TableHead>
-                              <TableHead className="w-[50px]"></TableHead>
+                              <TableHead className="w-[100px] text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -329,10 +339,15 @@ export function ProjectPage() {
                                 <TableCell><div>{expense.description}{expense.category === 'Materials' && expense.workStage && (<Badge variant="outline" className="ml-2">{expense.workStage}</Badge>)}</div></TableCell>
                                 <TableCell><Badge variant="secondary">{expense.category}</Badge></TableCell>
                                 <TableCell className="text-right font-medium"><Tooltip><TooltipTrigger asChild><span>{formatCurrency(calculateTotalExpense(expense))}</span></TooltipTrigger><TooltipContent><div className="p-1 text-sm"><div className="flex justify-between gap-4"><span>Subtotal:</span><span>{formatCurrency(expense.amount)}</span></div>{(expense.taxes ?? []).map(tax => (<div key={tax.id} className="flex justify-between gap-4"><span>{tax.name} ({tax.rate}%):</span><span>{formatCurrency(expense.amount * (tax.rate / 100))}</span></div>))}</div></TooltipContent></Tooltip></TableCell>
-                                <TableCell>
-                                  <Button variant="ghost" size="icon" onClick={() => setEditingExpense(expense)}>
-                                    <Pencil className="h-4 w-4 text-muted-foreground" />
-                                  </Button>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-1">
+                                    <Button variant="ghost" size="icon" onClick={() => setEditingExpense(expense)}>
+                                      <Pencil className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(expense.id)}>
+                                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))) : (<TableRow><TableCell colSpan={5} className="text-center h-24">No expenses logged yet.</TableCell></TableRow>)}

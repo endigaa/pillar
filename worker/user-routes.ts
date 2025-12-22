@@ -166,6 +166,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await project.patch(allowedUpdates);
     return ok(c, await project.getState());
   });
+  app.delete('/api/projects/:id', async (c) => {
+    const { id } = c.req.param();
+    const deleted = await ProjectModel.delete(c.env, id);
+    if (!deleted) return notFound(c, 'Project not found');
+    return ok(c, { success: true });
+  });
   // PLAN STAGES
   app.post('/api/projects/:id/plan-stages', async (c) => {
     const { id } = c.req.param();
@@ -231,6 +237,13 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const updatedExpense = await project.updateExpense(expenseId, updates);
     if (!updatedExpense) return notFound(c, 'Expense not found');
     return ok(c, updatedExpense);
+  });
+  app.delete('/api/projects/:id/expenses/:expenseId', async (c) => {
+    const { id, expenseId } = c.req.param();
+    const project = await ProjectModel.findInstance(c.env, id);
+    if (!project) return notFound(c, 'Project not found');
+    await project.deleteExpense(expenseId);
+    return ok(c, { success: true });
   });
   // WORKSITE MATERIALS
   app.put('/api/projects/:id/worksite-materials/:materialId', async (c) => {
@@ -363,6 +376,13 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!updatedTask) return notFound(c, 'Task not found');
     return ok(c, updatedTask);
   });
+  app.delete('/api/projects/:id/tasks/:taskId', async (c) => {
+    const { id, taskId } = c.req.param();
+    const project = await ProjectModel.findInstance(c.env, id);
+    if (!project) return notFound(c, 'Project not found');
+    await project.deleteTask(taskId);
+    return ok(c, { success: true });
+  });
   // CLIENT DOCUMENTS (PORTAL)
   app.post('/api/portal/:id/documents', async (c) => {
     const { id } = c.req.param();
@@ -470,6 +490,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await client.patch(updates);
     return ok(c, await client.getState());
   });
+  app.delete('/api/clients/:id', async (c) => {
+    const { id } = c.req.param();
+    const deleted = await ClientModel.delete(c.env, id);
+    if (!deleted) return notFound(c, 'Client not found');
+    return ok(c, { success: true });
+  });
   // CLIENT STATEMENT
   app.get('/api/clients/:id/statement', async (c) => {
     const { id } = c.req.param();
@@ -551,6 +577,20 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const created = await WorkshopModel.create(c.env, newWorkshop);
     return ok(c, created);
   });
+  app.put('/api/workshops/:id', async (c) => {
+    const { id } = c.req.param();
+    const updates = await c.req.json<Partial<Workshop>>();
+    const workshop = await WorkshopModel.findInstance(c.env, id);
+    if (!workshop) return notFound(c, 'Workshop not found');
+    await workshop.patch(updates);
+    return ok(c, await workshop.getState());
+  });
+  app.delete('/api/workshops/:id', async (c) => {
+    const { id } = c.req.param();
+    const deleted = await WorkshopModel.delete(c.env, id);
+    if (!deleted) return notFound(c, 'Workshop not found');
+    return ok(c, { success: true });
+  });
   // TOOLS
   app.get('/api/tools', async (c) => {
     const tools = await ToolModel.all(c.env);
@@ -600,6 +640,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await tool.patch(updates);
     return ok(c, await tool.getState());
   });
+  app.delete('/api/tools/:id', async (c) => {
+    const { id } = c.req.param();
+    const deleted = await ToolModel.delete(c.env, id);
+    if (!deleted) return notFound(c, 'Tool not found');
+    return ok(c, { success: true });
+  });
   // SUBCONTRACTORS
   app.get('/api/subcontractors', async (c) => {
     const subcontractors = await SubContractorModel.all(c.env);
@@ -621,6 +667,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!sc) return notFound(c, 'Sub-contractor not found');
     await sc.patch(updates);
     return ok(c, await sc.getState());
+  });
+  app.delete('/api/subcontractors/:id', async (c) => {
+    const { id } = c.req.param();
+    const deleted = await SubContractorModel.delete(c.env, id);
+    if (!deleted) return notFound(c, 'Sub-contractor not found');
+    return ok(c, { success: true });
   });
   // SUPPLIERS
   app.get('/api/suppliers', async (c) => {
@@ -663,6 +715,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!supplier) return notFound(c, 'Supplier not found');
     await supplier.patch(updates);
     return ok(c, await supplier.getState());
+  });
+  app.delete('/api/suppliers/:id', async (c) => {
+    const { id } = c.req.param();
+    const deleted = await SupplierModel.delete(c.env, id);
+    if (!deleted) return notFound(c, 'Supplier not found');
+    return ok(c, { success: true });
   });
   // DYNAMIC CATEGORIES
   app.get('/api/supplier-categories', async (c) => {
@@ -990,6 +1048,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await material.patch(updates);
     return ok(c, await material.getState());
   });
+  app.delete('/api/workshop-materials/:id', async (c) => {
+    const { id } = c.req.param();
+    const deleted = await WorkshopMaterialModel.delete(c.env, id);
+    if (!deleted) return notFound(c, 'Material not found');
+    return ok(c, { success: true });
+  });
   app.post('/api/workshop-materials/move', async (c) => {
     const { sourceMaterialId, targetWorkshopId, quantity } = await c.req.json<{ sourceMaterialId: string, targetWorkshopId: string, quantity: number }>();
     if (!isStr(sourceMaterialId) || !isStr(targetWorkshopId) || quantity <= 0) {
@@ -1127,6 +1191,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     }
     await personnel.patch(updates);
     return ok(c, await personnel.getState());
+  });
+  app.delete('/api/personnel/:id', async (c) => {
+    const { id } = c.req.param();
+    const deleted = await PersonnelModel.delete(c.env, id);
+    if (!deleted) return notFound(c, 'Personnel not found');
+    return ok(c, { success: true });
   });
   app.post('/api/personnel/:id/days-off', async (c) => {
     const { id } = c.req.param();

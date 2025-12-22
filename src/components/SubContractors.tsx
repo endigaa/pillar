@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { PlusCircle, MapPin, Pencil } from 'lucide-react';
+import { PlusCircle, MapPin, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import type { SubContractor } from '@shared/types';
 import { AddSubContractorForm } from './AddSubContractorForm';
@@ -53,6 +53,16 @@ export function SubContractors() {
       fetchSubContractors();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update sub-contractor.');
+    }
+  };
+  const handleDeleteSubContractor = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this sub-contractor?')) return;
+    try {
+      await api(`/api/subcontractors/${id}`, { method: 'DELETE' });
+      toast.success('Sub-contractor deleted successfully');
+      fetchSubContractors();
+    } catch (err) {
+      toast.error('Failed to delete sub-contractor');
     }
   };
   return (
@@ -121,9 +131,14 @@ export function SubContractors() {
                     <TableCell>{sc.email}</TableCell>
                     <TableCell>{sc.phone}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => setEditingSubContractor(sc)}>
-                        <Pencil className="h-4 w-4 text-muted-foreground" />
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => setEditingSubContractor(sc)}>
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteSubContractor(sc.id)}>
+                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

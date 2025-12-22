@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { PlusCircle, Eye, EyeOff, User, Wrench, Truck, HardHat, Pencil } from 'lucide-react';
+import { PlusCircle, Eye, EyeOff, User, Wrench, Truck, HardHat, Pencil, Trash2 } from 'lucide-react';
 import { AddTaskForm } from './AddTaskForm';
 import { EditTaskForm } from './EditTaskForm';
 import type { Task, TaskStatus, ResourceType } from '@shared/types';
@@ -46,16 +46,23 @@ export function ProjectTasks({ tasks = [], onAddTask, onUpdateTaskStatus }: Proj
         body: JSON.stringify(values),
       });
       toast.success('Task updated successfully!');
-      // We need to refresh the page or parent state to see changes.
-      // Since onAddTask triggers a refresh in parent, we can reuse that mechanism or reload.
-      // Ideally, onUpdateTaskStatus should be generic onUpdateTask, but for now we'll trigger a reload via window or callback if available.
-      // The parent ProjectPage fetches data on mount/update. We can't easily trigger it from here without a new prop.
-      // However, onAddTask is typed to take Omit<Task...>, so we can't use it directly.
-      // Let's assume the parent will refresh if we call onUpdateTaskStatus (it fetches data).
-      // A bit hacky but works for now to trigger re-fetch.
-      onUpdateTaskStatus(editingTask.id, editingTask.status); 
+      // Trigger refresh via parent callback mechanism (reusing status update to force fetch)
+      onUpdateTaskStatus(editingTask.id, editingTask.status);
     } catch (err) {
       toast.error('Failed to update task.');
+    }
+  };
+  const handleDeleteTask = async (taskId: string) => {
+    if (!projectId) return;
+    if (!window.confirm('Are you sure you want to delete this task?')) return;
+    try {
+      await api(`/api/projects/${projectId}/tasks/${taskId}`, { method: 'DELETE' });
+      toast.success('Task deleted successfully');
+      // Trigger refresh via parent callback mechanism (reusing status update to force fetch)
+      // We pass 'Done' just to trigger the fetch, the status doesn't matter as task is gone
+      onUpdateTaskStatus(taskId, 'Done');
+    } catch (err) {
+      toast.error('Failed to delete task');
     }
   };
   // Safe copy for sorting
@@ -89,10 +96,10 @@ export function ProjectTasks({ tasks = [], onAddTask, onUpdateTaskStatus }: Proj
               <DialogDescription>Modify task details.</DialogDescription>
             </DialogHeader>
             {editingTask && (
-              <EditTaskForm 
-                initialValues={editingTask} 
-                onSubmit={handleUpdateTask} 
-                onFinished={() => setEditingTask(null)} 
+              <EditTaskForm
+                initialValues={editingTask}
+                onSubmit={handleUpdateTask}
+                onFinished={() => setEditingTask(null)}
               />
             )}
           </DialogContent>
@@ -131,14 +138,24 @@ export function ProjectTasks({ tasks = [], onAddTask, onUpdateTaskStatus }: Proj
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className={cn("whitespace-nowrap", getStatusColor(task.status))}>{task.status}</Badge>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => setEditingTask(task)}
-                          >
-                            <Pencil className="h-3 w-3 text-muted-foreground" />
-                          </Button>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => setEditingTask(task)}
+                            >
+                              <Pencil className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleDeleteTask(task.id)}
+                            >
+                              <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
