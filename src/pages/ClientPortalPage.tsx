@@ -4,7 +4,7 @@ import { api } from '@/lib/api-client';
 import type { Project, ClientDocument, ChangeOrder } from '@shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building, DollarSign, TrendingUp, TrendingDown, Wallet, CheckCircle2, MapPin, Upload, FileText, ExternalLink, MessageSquare, FileSignature, Check, X, User, ZoomIn, Users, HardHat, Recycle, Image as ImageIcon, Eye } from 'lucide-react';
+import { Building, DollarSign, TrendingUp, TrendingDown, Wallet, CheckCircle2, MapPin, Upload, FileText, ExternalLink, MessageSquare, FileSignature, Check, X, User, ZoomIn, HardHat, Recycle, Image as ImageIcon, Eye } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -517,11 +517,16 @@ export function ClientPortalPage() {
                               <div className="flex items-start gap-3">
                                 <CheckCircle2 className={cn("h-5 w-5 mt-0.5 flex-shrink-0", task.status === 'Done' ? 'text-green-500' : 'text-gray-300 dark:text-gray-600')} />
                                 <div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <p className={cn("font-medium", task.status === 'Done' && 'line-through text-muted-foreground')}>{task.description}</p>
                                     {task.constructionStageName && (
                                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal">
                                         {task.constructionStageName}
+                                      </Badge>
+                                    )}
+                                    {task.areaName && (
+                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-normal">
+                                        {task.areaName}
                                       </Badge>
                                     )}
                                   </div>

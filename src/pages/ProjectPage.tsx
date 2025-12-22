@@ -12,6 +12,13 @@ import { PlusCircle, Share2, Copy, FileText, ExternalLink, MapPin, Calculator, P
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { AddExpenseForm } from '@/components/AddExpenseForm';
 import { EditExpenseForm } from '@/components/EditExpenseForm';
 import { ProjectDeposits } from '@/components/ProjectDeposits';
@@ -49,6 +56,7 @@ export function ProjectPage() {
   const [isQuickQuoteOpen, setQuickQuoteOpen] = useState(false);
   const [isCreateInvoiceOpen, setCreateInvoiceOpen] = useState(false);
   const [isEditProjectOpen, setEditProjectOpen] = useState(false);
+  const [areaFilter, setAreaFilter] = useState<string>('all');
   const clientPortalLink = `${window.location.origin}/portal/${id}`;
   const { formatCurrency } = useCurrency();
   const fetchProjectData = useCallback(async () => {
@@ -74,10 +82,14 @@ export function ProjectPage() {
     setIsLoading(true);
     fetchProjectData();
   }, [fetchProjectData]);
-  // Pagination for Expenses
-  const sortedExpenses = useMemo(() => {
-    return (project?.expenses || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [project?.expenses]);
+  // Pagination for Expenses with Area Filtering
+  const filteredExpenses = useMemo(() => {
+    let expenses = project?.expenses || [];
+    if (areaFilter !== 'all') {
+      expenses = expenses.filter(e => e.areaId === areaFilter);
+    }
+    return expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [project?.expenses, areaFilter]);
   const {
     currentData: currentExpenses,
     currentPage: expensesPage,
@@ -85,7 +97,7 @@ export function ProjectPage() {
     goToPage: goToExpensesPage,
     nextPage: nextExpensesPage,
     prevPage: prevExpensesPage
-  } = usePagination(sortedExpenses, 10);
+  } = usePagination(filteredExpenses, 10);
   // Pagination for Invoices
   const {
     currentData: currentInvoices,
@@ -204,7 +216,9 @@ export function ProjectPage() {
       toast.error('No expenses to export.');
       return;
     }
-    const data = project.expenses.map(exp => {
+    // Export filtered expenses if a filter is active, otherwise all
+    const expensesToExport = areaFilter !== 'all' ? filteredExpenses : project.expenses;
+    const data = expensesToExport.map(exp => {
       const total = calculateTotalExpense(exp);
       const taxAmount = total - exp.amount;
       return {
@@ -365,9 +379,20 @@ export function ProjectPage() {
               <div className="grid gap-6 lg:grid-cols-5">
                 <div className="lg:col-span-3 space-y-6">
                   <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
+                    <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div><CardTitle>Bill of Materials (BOM)</CardTitle><CardDescription>Detailed list of all project expenses.</CardDescription></div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Select value={areaFilter} onValueChange={setAreaFilter}>
+                          <SelectTrigger className="w-[160px] h-9">
+                            <SelectValue placeholder="Filter by Area" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Areas</SelectItem>
+                            {(project.areas || []).map(area => (
+                              <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <Button variant="outline" size="sm" onClick={handleExportExpenses}>
                           <Download className="mr-2 h-4 w-4" /> Export CSV
                         </Button>
