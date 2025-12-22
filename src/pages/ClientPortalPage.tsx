@@ -4,7 +4,7 @@ import { api } from '@/lib/api-client';
 import type { Project, ClientDocument, ChangeOrder } from '@shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building, DollarSign, TrendingUp, TrendingDown, Wallet, CheckCircle2, MapPin, Upload, FileText, ExternalLink, MessageSquare, FileSignature, Check, X, User, ZoomIn, Users, HardHat, Recycle, Image as ImageIcon } from 'lucide-react';
+import { Building, DollarSign, TrendingUp, TrendingDown, Wallet, CheckCircle2, MapPin, Upload, FileText, ExternalLink, MessageSquare, FileSignature, Check, X, User, ZoomIn, Users, HardHat, Recycle, Image as ImageIcon, Eye } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { calculateProjectFinancials } from '@/lib/utils';
 import { SiteResources } from '@/components/SiteResources';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ChangeOrderDetailDialog } from '@/components/ChangeOrderDetailDialog';
 const formatCurrency = (amountInCents: number) => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -54,6 +55,7 @@ export function ClientPortalPage() {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [isSendingFeedback, setIsSendingFeedback] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [viewingChangeOrder, setViewingChangeOrder] = useState<ChangeOrder | null>(null);
   const { profile, fetchProfile, isLoading: isProfileLoading } = useCompanyProfile();
   useEffect(() => {
     fetchProfile();
@@ -321,16 +323,21 @@ export function ClientPortalPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            {co.status === 'Sent' && (
-                              <div className="flex justify-end gap-2">
-                                <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleUpdateChangeOrderStatus(co.id, 'Approved')}>
-                                  <Check className="mr-1 h-4 w-4" /> Approve
+                            <div className="flex justify-end gap-2">
+                                <Button size="sm" variant="ghost" onClick={() => setViewingChangeOrder(co)}>
+                                    <Eye className="mr-2 h-4 w-4" /> View
                                 </Button>
-                                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleUpdateChangeOrderStatus(co.id, 'Rejected')}>
-                                  <X className="mr-1 h-4 w-4" /> Reject
-                                </Button>
-                              </div>
-                            )}
+                                {co.status === 'Sent' && (
+                                <>
+                                    <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleUpdateChangeOrderStatus(co.id, 'Approved')}>
+                                    <Check className="mr-1 h-4 w-4" /> Approve
+                                    </Button>
+                                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleUpdateChangeOrderStatus(co.id, 'Rejected')}>
+                                    <X className="mr-1 h-4 w-4" /> Reject
+                                    </Button>
+                                </>
+                                )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -512,6 +519,11 @@ export function ClientPortalPage() {
         initialIndex={viewerIndex ?? 0}
         isOpen={viewerIndex !== null}
         onClose={() => setViewerIndex(null)}
+      />
+      <ChangeOrderDetailDialog 
+        changeOrder={viewingChangeOrder} 
+        open={!!viewingChangeOrder} 
+        onOpenChange={(open) => !open && setViewingChangeOrder(null)} 
       />
     </div>
   );

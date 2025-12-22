@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/api-client';
 import type { Client, Project } from '@shared/types';
-import { Copy, Loader2 } from 'lucide-react';
+import { Copy, Loader2, Printer } from 'lucide-react';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 const TEMPLATES = [
   {
     id: 'service-agreement',
@@ -109,6 +110,7 @@ export function DocumentTemplates() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [generatedContent, setGeneratedContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -159,6 +161,9 @@ export function DocumentTemplates() {
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedContent);
     toast.success('Template copied to clipboard!');
+  };
+  const handlePrint = () => {
+    window.print();
   };
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -217,10 +222,16 @@ export function DocumentTemplates() {
             <CardTitle>Preview</CardTitle>
             <CardDescription>Generated document content.</CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={handleCopy} disabled={!generatedContent}>
-            <Copy className="mr-2 h-4 w-4" />
-            Copy
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setIsPreviewOpen(true)} disabled={!generatedContent}>
+                <Printer className="mr-2 h-4 w-4" />
+                Preview & Print
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleCopy} disabled={!generatedContent}>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="flex-1">
           <Textarea
@@ -230,6 +241,54 @@ export function DocumentTemplates() {
           />
         </CardContent>
       </Card>
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="no-print">
+                <DialogTitle>Document Preview</DialogTitle>
+                <DialogDescription>Review the document before printing.</DialogDescription>
+            </DialogHeader>
+            <style>
+              {`
+                @media print {
+                  body {
+                    visibility: hidden;
+                  }
+                  #printable-document, #printable-document * {
+                    visibility: visible;
+                  }
+                  #printable-document {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    margin: 0;
+                    padding: 40px; /* Standard margin */
+                    background: white;
+                    color: black;
+                    font-size: 12pt;
+                    line-height: 1.5;
+                  }
+                  [role="dialog"] > button {
+                    display: none;
+                  }
+                  .no-print {
+                    display: none !important;
+                  }
+                }
+              `}
+            </style>
+            <div id="printable-document" className="whitespace-pre-wrap font-serif text-base leading-relaxed p-8 border rounded-md bg-white text-black shadow-sm">
+                {generatedContent}
+            </div>
+            <DialogFooter className="no-print">
+                <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>Close</Button>
+                <Button onClick={handlePrint}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
