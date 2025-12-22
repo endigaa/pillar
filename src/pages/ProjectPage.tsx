@@ -418,7 +418,7 @@ export function ProjectPage() {
                                 <TableCell>
                                   <div>
                                     {expense.description}
-                                    {expense.category === 'Materials' && expense.workStage && (<Badge variant="outline" className="ml-2">{expense.workStage}</Badge>)}
+                                    {expense.workStage && (<Badge variant="outline" className="ml-2">{expense.workStage}</Badge>)}
                                     {expense.areaName && (<Badge variant="secondary" className="ml-2 text-[10px]">{expense.areaName}</Badge>)}
                                   </div>
                                 </TableCell>

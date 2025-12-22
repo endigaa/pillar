@@ -4,7 +4,7 @@ import { api } from '@/lib/api-client';
 import type { Project, ClientDocument, ChangeOrder } from '@shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building, DollarSign, TrendingUp, TrendingDown, Wallet, CheckCircle2, MapPin, Upload, FileText, ExternalLink, MessageSquare, FileSignature, Check, X, User, ZoomIn, HardHat, Recycle, Image as ImageIcon, Eye } from 'lucide-react';
+import { Building, DollarSign, TrendingUp, TrendingDown, Wallet, CheckCircle2, MapPin, Upload, FileText, ExternalLink, MessageSquare, FileSignature, Check, X, User, Users, ZoomIn, HardHat, Recycle, Image as ImageIcon, Eye } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
