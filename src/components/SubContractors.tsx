@@ -10,6 +10,8 @@ import type { SubContractor } from '@shared/types';
 import { AddSubContractorForm } from './AddSubContractorForm';
 import { EditSubContractorForm } from './EditSubContractorForm';
 import { Toaster, toast } from '@/components/ui/sonner';
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/DataTablePagination';
 export function SubContractors() {
   const [subContractors, setSubContractors] = useState<SubContractor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,6 +31,14 @@ export function SubContractors() {
   useEffect(() => {
     fetchSubContractors();
   }, [fetchSubContractors]);
+  const {
+    currentData: currentSubContractors,
+    currentPage,
+    totalPages,
+    goToPage,
+    nextPage,
+    prevPage
+  } = usePagination(subContractors, 10);
   const handleCreateSubContractor = async (values: Omit<SubContractor, 'id'>) => {
     try {
       await api('/api/subcontractors', {
@@ -113,8 +123,8 @@ export function SubContractors() {
                     <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : subContractors.length > 0 ? (
-                subContractors.map((sc) => (
+              ) : currentSubContractors.length > 0 ? (
+                currentSubContractors.map((sc) => (
                   <TableRow key={sc.id}>
                     <TableCell className="font-medium">{sc.name}</TableCell>
                     <TableCell>{sc.specialization}</TableCell>
@@ -151,6 +161,13 @@ export function SubContractors() {
               )}
             </TableBody>
           </Table>
+          <DataTablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            onNext={nextPage}
+            onPrevious={prevPage}
+          />
         </CardContent>
       </Card>
       <Dialog open={!!editingSubContractor} onOpenChange={(open) => !open && setEditingSubContractor(null)}>

@@ -13,6 +13,8 @@ import { MoveToolDialog } from './MoveToolDialog';
 import { Toaster, toast } from '@/components/ui/sonner';
 import { Badge } from './ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/DataTablePagination';
 export function ToolInventory() {
   const [tools, setTools] = useState<Tool[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,6 +35,14 @@ export function ToolInventory() {
   useEffect(() => {
     fetchTools();
   }, [fetchTools]);
+  const {
+    currentData: currentTools,
+    currentPage,
+    totalPages,
+    goToPage,
+    nextPage,
+    prevPage
+  } = usePagination(tools, 10);
   const handleCreateTool = async (values: Omit<Tool, 'id'>) => {
     try {
       await api('/api/tools', {
@@ -113,8 +123,8 @@ export function ToolInventory() {
                     <TableCell><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : tools.length > 0 ? (
-                tools.map((tool) => (
+              ) : currentTools.length > 0 ? (
+                currentTools.map((tool) => (
                   <TableRow key={tool.id}>
                     <TableCell>
                         {tool.imageUrl ? (
@@ -171,6 +181,13 @@ export function ToolInventory() {
               )}
             </TableBody>
           </Table>
+          <DataTablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            onNext={nextPage}
+            onPrevious={prevPage}
+          />
         </CardContent>
       </Card>
       <Dialog open={!!moveTool} onOpenChange={(open) => !open && setMoveTool(null)}>

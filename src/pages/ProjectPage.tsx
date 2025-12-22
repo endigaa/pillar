@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { api } from '@/lib/api-client';
@@ -34,6 +34,8 @@ import { ProjectResources } from '@/components/ProjectResources';
 import { UnusedMaterialsReport } from '@/components/UnusedMaterialsReport';
 import { calculateProjectFinancials, calculateTotalExpense, exportToCsv } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/DataTablePagination';
 export function ProjectPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -71,6 +73,27 @@ export function ProjectPage() {
     setIsLoading(true);
     fetchProjectData();
   }, [fetchProjectData]);
+  // Pagination for Expenses
+  const sortedExpenses = useMemo(() => {
+    return (project?.expenses || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [project?.expenses]);
+  const {
+    currentData: currentExpenses,
+    currentPage: expensesPage,
+    totalPages: expensesTotalPages,
+    goToPage: goToExpensesPage,
+    nextPage: nextExpensesPage,
+    prevPage: prevExpensesPage
+  } = usePagination(sortedExpenses, 10);
+  // Pagination for Invoices
+  const {
+    currentData: currentInvoices,
+    currentPage: invoicesPage,
+    totalPages: invoicesTotalPages,
+    goToPage: goToInvoicesPage,
+    nextPage: nextInvoicesPage,
+    prevPage: prevInvoicesPage
+  } = usePagination(invoices, 5);
   const handleAddExpense = async (values: Omit<Expense, 'id'>) => {
     if (!id) return;
     try {
@@ -360,7 +383,7 @@ export function ProjectPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {(project.expenses || []).length > 0 ? ((project.expenses || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((expense: Expense) => (
+                            {currentExpenses.length > 0 ? (currentExpenses.map((expense: Expense) => (
                               <TableRow key={expense.id}>
                                 <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
                                 <TableCell><div>{expense.description}{expense.category === 'Materials' && expense.workStage && (<Badge variant="outline" className="ml-2">{expense.workStage}</Badge>)}</div></TableCell>
@@ -380,6 +403,13 @@ export function ProjectPage() {
                             ))) : (<TableRow><TableCell colSpan={5} className="text-center h-24">No expenses logged yet.</TableCell></TableRow>)}
                           </TableBody>
                         </Table>
+                        <DataTablePagination
+                          currentPage={expensesPage}
+                          totalPages={expensesTotalPages}
+                          onPageChange={goToExpensesPage}
+                          onNext={nextExpensesPage}
+                          onPrevious={prevExpensesPage}
+                        />
                       </TooltipProvider>
                     </CardContent>
                   </Card>
@@ -425,8 +455,15 @@ export function ProjectPage() {
               <CardContent>
                 <Table>
                   <TableHeader><TableRow><TableHead>Invoice #</TableHead><TableHead>Issue Date</TableHead><TableHead>Due Date</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
-                  <TableBody>{invoices.length > 0 ? (invoices.map(invoice => (<TableRow key={invoice.id} onClick={() => navigate(`/invoices/${invoice.id}`)} className="cursor-pointer hover:bg-muted/50"><TableCell className="font-medium">{invoice.invoiceNumber}</TableCell><TableCell>{new Date(invoice.issueDate).toLocaleDateString()}</TableCell><TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell><TableCell><Badge>{invoice.status}</Badge></TableCell><TableCell className="text-right font-mono">{formatCurrency(invoice.total)}</TableCell></TableRow>))) : (<TableRow><TableCell colSpan={5} className="text-center h-24">No invoices for this project yet.</TableCell></TableRow>)}</TableBody>
+                  <TableBody>{currentInvoices.length > 0 ? (currentInvoices.map(invoice => (<TableRow key={invoice.id} onClick={() => navigate(`/invoices/${invoice.id}`)} className="cursor-pointer hover:bg-muted/50"><TableCell className="font-medium">{invoice.invoiceNumber}</TableCell><TableCell>{new Date(invoice.issueDate).toLocaleDateString()}</TableCell><TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell><TableCell><Badge>{invoice.status}</Badge></TableCell><TableCell className="text-right font-mono">{formatCurrency(invoice.total)}</TableCell></TableRow>))) : (<TableRow><TableCell colSpan={5} className="text-center h-24">No invoices for this project yet.</TableCell></TableRow>)}</TableBody>
                 </Table>
+                <DataTablePagination
+                  currentPage={invoicesPage}
+                  totalPages={invoicesTotalPages}
+                  onPageChange={goToInvoicesPage}
+                  onNext={nextInvoicesPage}
+                  onPrevious={prevInvoicesPage}
+                />
               </CardContent>
             </Card>
           </TabsContent>

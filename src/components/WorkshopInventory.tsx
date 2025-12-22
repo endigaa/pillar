@@ -16,6 +16,8 @@ import { AddWorkshopMaterialForm } from './AddWorkshopMaterialForm';
 import { EditWorkshopForm } from './EditWorkshopForm';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/DataTablePagination';
 const formatCurrency = (amountInCents: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -71,8 +73,6 @@ export function WorkshopInventory() {
     try {
       await api(`/api/workshops/${id}`, { method: 'DELETE' });
       toast.success('Workshop deleted successfully');
-      // If we deleted the active workshop, the fetchData effect will handle resetting the active ID
-      // But we can optimistically update local state to prevent UI flicker
       const remaining = workshops.filter(w => w.id !== id);
       setWorkshops(remaining);
       if (activeWorkshopId === id && remaining.length > 0) {
@@ -80,7 +80,7 @@ export function WorkshopInventory() {
       } else if (remaining.length === 0) {
         setActiveWorkshopId('');
       }
-      fetchData(); // Full refresh to sync materials
+      fetchData();
     } catch (err) {
       toast.error('Failed to delete workshop');
     }
@@ -96,6 +96,14 @@ export function WorkshopInventory() {
     }
   };
   const filteredMaterials = materials.filter(m => m.workshopId === activeWorkshopId);
+  const {
+    currentData: currentMaterials,
+    currentPage,
+    totalPages,
+    goToPage,
+    nextPage,
+    prevPage
+  } = usePagination(filteredMaterials, 10);
   const getStatusColor = (status?: string) => {
       switch (status) {
           case 'Available': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
@@ -189,8 +197,8 @@ export function WorkshopInventory() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredMaterials.length > 0 ? (
-                          filteredMaterials.map((material) => (
+                        {currentMaterials.length > 0 ? (
+                          currentMaterials.map((material) => (
                             <TableRow key={material.id}>
                               <TableCell>
                                 {material.imageUrl ? (
@@ -250,6 +258,13 @@ export function WorkshopInventory() {
                       </TableBody>
                     </Table>
                   </div>
+                  <DataTablePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={goToPage}
+                    onNext={nextPage}
+                    onPrevious={prevPage}
+                  />
                 </TabsContent>
               ))}
             </Tabs>
