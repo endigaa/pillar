@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { api } from '@/lib/api-client';
-import type { Project, Expense, Deposit, ProgressPhoto, Task, TaskStatus, Invoice, Quote } from '@shared/types';
+import type { Project, Expense, Deposit, ProgressPhoto, Task, TaskStatus, Invoice, Quote, ConstructionStage } from '@shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -44,11 +44,13 @@ import { calculateProjectFinancials, calculateTotalExpense, exportToCsv } from '
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePagination } from '@/hooks/usePagination';
 import { DataTablePagination } from '@/components/DataTablePagination';
+import { ProjectCostReportDialog } from '@/components/ProjectCostReportDialog';
 export function ProjectPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [stages, setStages] = useState<ConstructionStage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddExpenseOpen, setAddExpenseOpen] = useState(false);
@@ -56,14 +58,20 @@ export function ProjectPage() {
   const [isQuickQuoteOpen, setQuickQuoteOpen] = useState(false);
   const [isCreateInvoiceOpen, setCreateInvoiceOpen] = useState(false);
   const [isEditProjectOpen, setEditProjectOpen] = useState(false);
+  const [isCostReportOpen, setIsCostReportOpen] = useState(false);
   const [areaFilter, setAreaFilter] = useState<string>('all');
+  const [stageFilter, setStageFilter] = useState<string>('all');
   const clientPortalLink = `${window.location.origin}/portal/${id}`;
   const { formatCurrency } = useCurrency();
   const fetchProjectData = useCallback(async () => {
     if (!id) return;
     try {
-      const projectData = await api<Project>(`/api/projects/${id}`);
+      const [projectData, stagesData] = await Promise.all([
+        api<Project>(`/api/projects/${id}`),
+        api<ConstructionStage[]>('/api/construction-stages')
+      ]);
       setProject(projectData);
+      setStages(stagesData);
       if (projectData.invoiceIds && projectData.invoiceIds.length > 0) {
         const invoicePromises = projectData.invoiceIds.map(invoiceId => api<Invoice>(`/api/invoices/${invoiceId}`));
         const invoiceResults = await Promise.all(invoicePromises);
@@ -82,14 +90,17 @@ export function ProjectPage() {
     setIsLoading(true);
     fetchProjectData();
   }, [fetchProjectData]);
-  // Pagination for Expenses with Area Filtering
+  // Pagination for Expenses with Area and Stage Filtering
   const filteredExpenses = useMemo(() => {
     let expenses = project?.expenses || [];
     if (areaFilter !== 'all') {
       expenses = expenses.filter(e => e.areaId === areaFilter);
     }
+    if (stageFilter !== 'all') {
+      expenses = expenses.filter(e => e.workStage === stageFilter);
+    }
     return expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [project?.expenses, areaFilter]);
+  }, [project?.expenses, areaFilter, stageFilter]);
   const {
     currentData: currentExpenses,
     currentPage: expensesPage,
@@ -217,7 +228,7 @@ export function ProjectPage() {
       return;
     }
     // Export filtered expenses if a filter is active, otherwise all
-    const expensesToExport = areaFilter !== 'all' ? filteredExpenses : project.expenses;
+    const expensesToExport = (areaFilter !== 'all' || stageFilter !== 'all') ? filteredExpenses : project.expenses;
     const data = expensesToExport.map(exp => {
       const total = calculateTotalExpense(exp);
       const taxAmount = total - exp.amount;
@@ -270,6 +281,9 @@ export function ProjectPage() {
             <p className="text-lg text-muted-foreground">Client: {project.clientName}</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setIsCostReportOpen(true)}>
+              <FileText className="mr-2 h-4 w-4" /> Cost Report
+            </Button>
             <Dialog open={isQuickQuoteOpen} onOpenChange={setQuickQuoteOpen}>
               <DialogTrigger asChild>
                 <Button variant="secondary"><Calculator className="mr-2 h-4 w-4" /> Quick Quote / Change Order</Button>
@@ -382,6 +396,17 @@ export function ProjectPage() {
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div><CardTitle>Bill of Materials (BOM)</CardTitle><CardDescription>Detailed list of all project expenses.</CardDescription></div>
                       <div className="flex flex-wrap gap-2">
+                        <Select value={stageFilter} onValueChange={setStageFilter}>
+                          <SelectTrigger className="w-[160px] h-9">
+                            <SelectValue placeholder="Filter by Stage" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Stages</SelectItem>
+                            {stages.map(stage => (
+                              <SelectItem key={stage.id} value={stage.name}>{stage.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <Select value={areaFilter} onValueChange={setAreaFilter}>
                           <SelectTrigger className="w-[160px] h-9">
                             <SelectValue placeholder="Filter by Area" />
@@ -530,6 +555,11 @@ export function ProjectPage() {
           )}
         </DialogContent>
       </Dialog>
+      <ProjectCostReportDialog
+        project={project}
+        open={isCostReportOpen}
+        onOpenChange={setIsCostReportOpen}
+      />
       <Toaster richColors />
     </AppLayout>
   );
