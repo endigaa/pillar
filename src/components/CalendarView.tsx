@@ -1,23 +1,23 @@
 import { useState } from 'react';
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  isSameMonth,
-  isSameDay,
-  addMonths,
-  subMonths,
-  isToday
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfWeek, 
+  endOfWeek, 
+  eachDayOfInterval, 
+  isSameMonth, 
+  isSameDay, 
+  addMonths, 
+  subMonths, 
+  isToday 
 } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useNavigate } from 'react-router-dom';
 export type CalendarEventType = 'project-start' | 'project-end' | 'task' | 'time-off';
 export interface CalendarEvent {
   id: string;
@@ -25,14 +25,12 @@ export interface CalendarEvent {
   date: Date;
   type: CalendarEventType;
   description?: string;
-  url?: string;
 }
 interface CalendarViewProps {
   events: CalendarEvent[];
 }
 export function CalendarView({ events }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const navigate = useNavigate();
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const jumpToToday = () => setCurrentMonth(new Date());
@@ -52,11 +50,6 @@ export function CalendarView({ events }: CalendarViewProps) {
       case 'task': return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800';
       case 'time-off': return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-  const handleEventClick = (event: CalendarEvent) => {
-    if (event.url) {
-      navigate(event.url);
     }
   };
   return (
@@ -87,7 +80,7 @@ export function CalendarView({ events }: CalendarViewProps) {
           ))}
         </div>
         <div className="grid grid-cols-7 auto-rows-fr bg-background">
-          {calendarDays.map((day) => {
+          {calendarDays.map((day, dayIdx) => {
             const dayEvents = getEventsForDay(day);
             const isCurrentMonth = isSameMonth(day, monthStart);
             const isTodayDate = isToday(day);
@@ -116,14 +109,9 @@ export function CalendarView({ events }: CalendarViewProps) {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEventClick(event);
-                            }}
                             className={cn(
-                              "text-xs px-1.5 py-0.5 rounded border truncate font-medium transition-all",
-                              getEventColor(event.type),
-                              event.url ? "cursor-pointer hover:opacity-80 hover:shadow-sm" : "cursor-default"
+                              "text-xs px-1.5 py-0.5 rounded border truncate cursor-default font-medium",
+                              getEventColor(event.type)
                             )}
                           >
                             {event.title}
@@ -133,7 +121,6 @@ export function CalendarView({ events }: CalendarViewProps) {
                           <p className="font-semibold">{event.title}</p>
                           {event.description && <p className="text-xs text-muted-foreground">{event.description}</p>}
                           <p className="text-xs opacity-70 capitalize mt-1">{event.type.replace('-', ' ')}</p>
-                          {event.url && <p className="text-[10px] text-blue-400 mt-1">Click to view details</p>}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

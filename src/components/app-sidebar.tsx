@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, Briefcase, Users, BarChart2, Settings, Building, Wrench, Truck, FileText, HelpCircle } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, BarChart2, Settings, Building, Wrench, Truck, FileText, HelpCircle, Calendar } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,6 +11,7 @@ import {
 import { useLocation } from "react-router-dom";
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard", exact: true },
+  { href: "/schedule", icon: Calendar, label: "Schedule" },
   { href: "/projects", icon: Briefcase, label: "Projects" },
   { href: "/clients", icon: Users, label: "Clients" },
   { href: "/invoices", icon: FileText, label: "Invoices" },

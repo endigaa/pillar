@@ -29,8 +29,7 @@ export function SchedulePage() {
                 title: `Start: ${project.name}`,
                 date: date,
                 type: 'project-start',
-                description: `Client: ${project.clientName}`,
-                url: `/projects/${project.id}`
+                description: `Client: ${project.clientName}`
               });
             }
           }
@@ -43,8 +42,7 @@ export function SchedulePage() {
                 title: `Due: ${project.name}`,
                 date: date,
                 type: 'project-end',
-                description: `Status: ${project.status}`,
-                url: `/projects/${project.id}`
+                description: `Status: ${project.status}`
               });
             }
           }
@@ -58,8 +56,7 @@ export function SchedulePage() {
                   title: task.description,
                   date: date,
                   type: 'task',
-                  description: `Project: ${project.name}`,
-                  url: `/projects/${project.id}`
+                  description: `Project: ${project.name}`
                 });
               }
             }

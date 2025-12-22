@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Share2, Copy, FileText, ExternalLink, MapPin, Calculator, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle, Share2, Copy, FileText, ExternalLink, MapPin, Calculator, Pencil, Trash2, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ import { EditProjectForm } from '@/components/EditProjectForm';
 import { ProjectMaterials } from '@/components/ProjectMaterials';
 import { ProjectResources } from '@/components/ProjectResources';
 import { UnusedMaterialsReport } from '@/components/UnusedMaterialsReport';
-import { calculateProjectFinancials, calculateTotalExpense } from '@/lib/utils';
+import { calculateProjectFinancials, calculateTotalExpense, exportToCsv } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 export function ProjectPage() {
   const { id } = useParams<{ id: string }>();
@@ -174,6 +174,28 @@ export function ProjectPage() {
     } catch (e) {
       toast.error('Failed to convert quote');
     }
+  };
+  const handleExportExpenses = () => {
+    if (!project || !project.expenses || project.expenses.length === 0) {
+      toast.error('No expenses to export.');
+      return;
+    }
+    const data = project.expenses.map(exp => {
+      const total = calculateTotalExpense(exp);
+      const taxAmount = total - exp.amount;
+      return {
+        Date: new Date(exp.date).toLocaleDateString(),
+        Description: exp.description,
+        Category: exp.category,
+        'Subtotal ($)': (exp.amount / 100).toFixed(2),
+        'Tax ($)': (taxAmount / 100).toFixed(2),
+        'Total ($)': (total / 100).toFixed(2),
+        'Work Stage': exp.workStage || '',
+        'Invoiced': exp.invoiced ? 'Yes' : 'No'
+      };
+    });
+    exportToCsv(`${project.name.replace(/\s+/g, '_')}_BOM.csv`, data);
+    toast.success('BOM exported successfully!');
   };
   const copyLink = () => {
     navigator.clipboard.writeText(clientPortalLink);
@@ -318,7 +340,12 @@ export function ProjectPage() {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                       <div><CardTitle>Bill of Materials (BOM)</CardTitle><CardDescription>Detailed list of all project expenses.</CardDescription></div>
-                      <Dialog open={isAddExpenseOpen} onOpenChange={setAddExpenseOpen}><DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" />Add Expense</Button></DialogTrigger><DialogContent className="sm:max-w-[480px]"><DialogHeader><DialogTitle>Add New Expense</DialogTitle><DialogDescription>Log a new cost against the project budget.</DialogDescription></DialogHeader><AddExpenseForm onSubmit={handleAddExpense} onFinished={() => setAddExpenseOpen(false)} /></DialogContent></Dialog>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={handleExportExpenses}>
+                          <Download className="mr-2 h-4 w-4" /> Export CSV
+                        </Button>
+                        <Dialog open={isAddExpenseOpen} onOpenChange={setAddExpenseOpen}><DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" />Add Expense</Button></DialogTrigger><DialogContent className="sm:max-w-[480px]"><DialogHeader><DialogTitle>Add New Expense</DialogTitle><DialogDescription>Log a new cost against the project budget.</DialogDescription></DialogHeader><AddExpenseForm onSubmit={handleAddExpense} onFinished={() => setAddExpenseOpen(false)} /></DialogContent></Dialog>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <TooltipProvider>

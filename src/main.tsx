@@ -26,6 +26,7 @@ import { InvoiceDetailPage } from './pages/InvoiceDetailPage';
 import { ClientStatementPage } from './pages/ClientStatementPage';
 import { SupplierDetailPage } from './pages/SupplierDetailPage';
 import { HelpPage } from './pages/HelpPage';
+import { SchedulePage } from './pages/SchedulePage';
 import { AppInitializer } from './components/AppInitializer';
 const router = createBrowserRouter([
   {
@@ -50,6 +51,10 @@ const router = createBrowserRouter([
           {
             path: "/",
             element: <HomePage />,
+          },
+          {
+            path: "/schedule",
+            element: <SchedulePage />,
           },
           {
             path: "/projects",
