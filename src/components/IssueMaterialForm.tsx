@@ -148,7 +148,7 @@ export function IssueMaterialForm({ projectId, onFinished, areas = [] }: IssueMa
                 name="areaId"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Project Area (Optional)</FormLabel>
+                    <FormLabel>Project Area / Unit (Optional)</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoading}>
                     <FormControl>
                         <SelectTrigger>

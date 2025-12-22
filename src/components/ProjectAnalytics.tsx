@@ -73,6 +73,26 @@ export function ProjectAnalytics({ project, invoices }: ProjectAnalyticsProps) {
       name,
       value: value / 100 // Convert to dollars for chart
     })).sort((a, b) => b.value - a.value);
+    // Area Analysis
+    const areaCosts: Record<string, number> = {};
+    // Expenses by Area
+    expenses.forEach(expense => {
+      const amount = calculateTotalExpense(expense);
+      const areaName = expense.areaName || 'Unassigned';
+      areaCosts[areaName] = (areaCosts[areaName] || 0) + amount;
+    });
+    // Materials by Area
+    (project.worksiteMaterials || []).forEach(material => {
+      const amount = (material.quantity * (material.unitCost || 0));
+      const areaName = material.areaName || 'Unassigned';
+      areaCosts[areaName] = (areaCosts[areaName] || 0) + amount;
+    });
+    const areaChartData = Object.entries(areaCosts)
+      .map(([name, value]) => ({
+        name,
+        value: value / 100
+      }))
+      .sort((a, b) => b.value - a.value);
     return {
       financials: {
         originalBudget,
@@ -103,7 +123,8 @@ export function ProjectAnalytics({ project, invoices }: ProjectAnalyticsProps) {
           { name: 'Invoiced', amount: invoicedAmount / 100 },
           { name: 'Collected', amount: collectedAmount / 100 },
         ],
-        expenses: expenseChartData
+        expenses: expenseChartData,
+        areaCosts: areaChartData
       }
     };
   }, [project, invoices, changeOrders]);
@@ -260,6 +281,37 @@ export function ProjectAnalytics({ project, invoices }: ProjectAnalyticsProps) {
               ) : (
                 <div className="h-full flex items-center justify-center text-muted-foreground">
                   No expenses recorded yet.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      {/* Area Cost Analysis */}
+      <div className="grid gap-6 md:grid-cols-1">
+        <Card>
+          <CardHeader>
+            <CardTitle>Cost Distribution by Area (Unit)</CardTitle>
+            <CardDescription>Spending breakdown across different construction units.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              {metrics.charts.areaCosts.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={metrics.charts.areaCosts} layout="vertical" margin={{ left: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} fontSize={12} width={100} />
+                    <Tooltip
+                      formatter={(value: number) => [formatCurrency(value * 100), 'Cost']}
+                      cursor={{ fill: 'transparent' }}
+                    />
+                    <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} barSize={30} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  No area-specific costs recorded yet.
                 </div>
               )}
             </div>

@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlusCircle, Eye, EyeOff, User, Wrench, Truck, HardHat, Pencil, Trash2, LayoutGrid, List } from 'lucide-react';
 import { AddTaskForm } from './AddTaskForm';
 import { EditTaskForm } from './EditTaskForm';
@@ -17,11 +16,11 @@ import { ProjectTaskBoard } from './ProjectTaskBoard';
 interface ProjectTasksProps {
   tasks: Task[];
   areas?: ProjectArea[];
+  projectId: string;
   onAddTask: (values: Omit<Task, 'id' | 'status'>) => Promise<void>;
   onUpdateTaskStatus: (taskId: string, status: TaskStatus) => Promise<void>;
 }
-export function ProjectTasks({ tasks = [], areas = [], onAddTask, onUpdateTaskStatus }: ProjectTasksProps) {
-  const { id: projectId } = useParams<{ id: string }>();
+export function ProjectTasks({ tasks = [], areas = [], projectId, onAddTask, onUpdateTaskStatus }: ProjectTasksProps) {
   const [isAddTaskOpen, setAddTaskOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
@@ -100,12 +99,10 @@ export function ProjectTasks({ tasks = [], areas = [], onAddTask, onUpdateTaskSt
             </Button>
           </div>
           <Dialog open={isAddTaskOpen} onOpenChange={setAddTaskOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Task
-              </Button>
-            </DialogTrigger>
+            <Button size="sm" onClick={() => setAddTaskOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Task
+            </Button>
             <DialogContent className="sm:max-w-[480px]">
               <DialogHeader>
                 <DialogTitle>Add New Task</DialogTitle>

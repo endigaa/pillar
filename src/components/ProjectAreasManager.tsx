@@ -43,8 +43,8 @@ export function ProjectAreasManager({ project, onUpdate }: ProjectAreasManagerPr
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Project Areas</CardTitle>
-          <CardDescription>Define specific zones (e.g., "Kitchen", "Gazebo") to tag expenses and tasks.</CardDescription>
+          <CardTitle>Project Areas / Units</CardTitle>
+          <CardDescription>Define specific units of construction (e.g., 'Gazebo', 'Main House') to tag expenses and tasks.</CardDescription>
         </div>
         <Dialog open={isAddAreaOpen} onOpenChange={setAddAreaOpen}>
           <DialogTrigger asChild>
@@ -62,7 +62,7 @@ export function ProjectAreasManager({ project, onUpdate }: ProjectAreasManagerPr
               onSubmit={handleAddArea}
               onCancel={() => setAddAreaOpen(false)}
               label="Area Name"
-              placeholder="e.g., Master Bedroom"
+              placeholder="e.g., Guest House"
             />
           </DialogContent>
         </Dialog>

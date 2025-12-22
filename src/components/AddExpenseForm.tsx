@@ -327,12 +327,12 @@ export function AddExpenseForm({ onSubmit, onFinished, areas = [], projectId }: 
             name="areaId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Project Area (Optional)</FormLabel>
+                <FormLabel>Project Area / Unit (Optional)</FormLabel>
                 <div className="flex gap-2">
                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoading}>
                     <FormControl>
                       <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Select area (e.g. Kitchen)" />
+                        <SelectValue placeholder="Select area (e.g. Guest House)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

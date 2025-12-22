@@ -262,7 +262,7 @@ export function AddTaskForm({ onSubmit, onFinished, areas = [] }: AddTaskFormPro
               name="areaId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Project Area (Optional)</FormLabel>
+                  <FormLabel>Project Area / Unit (Optional)</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoadingResources}>
                     <FormControl>
                       <SelectTrigger>
