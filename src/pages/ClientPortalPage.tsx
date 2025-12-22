@@ -23,13 +23,9 @@ import { SiteResources } from '@/components/SiteResources';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ChangeOrderDetailDialog } from '@/components/ChangeOrderDetailDialog';
-const formatCurrency = (amountInCents: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amountInCents / 100);
-};
-const StatCard = ({ title, value, icon: Icon, isLoading }: { title: string; value: string; icon: React.ElementType; isLoading: boolean }) => (
+import { useCurrency } from '@/hooks/useCurrency';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+const StatCard = ({ title, value, fullValue, icon: Icon, isLoading }: { title: string; value: string; fullValue?: string; icon: React.ElementType; isLoading: boolean }) => (
   <Card className="shadow-md">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -39,7 +35,16 @@ const StatCard = ({ title, value, icon: Icon, isLoading }: { title: string; valu
       {isLoading ? (
         <Skeleton className="h-8 w-3/4" />
       ) : (
-        <div className="text-3xl font-bold text-primary">{value}</div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="text-2xl md:text-3xl font-bold text-primary truncate cursor-default">{value}</div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{fullValue || value}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
     </CardContent>
   </Card>
@@ -57,6 +62,7 @@ export function ClientPortalPage() {
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [viewingChangeOrder, setViewingChangeOrder] = useState<ChangeOrder | null>(null);
   const { profile, fetchProfile, isLoading: isProfileLoading } = useCompanyProfile();
+  const { formatCurrency } = useCurrency();
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
@@ -210,13 +216,47 @@ export function ClientPortalPage() {
                 </div>
               )}
             </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              <StatCard title="Total Budget" value={formatCurrency(project?.budget ?? 0)} icon={DollarSign} isLoading={isLoading} />
-              <StatCard title="Funds Deposited" value={formatCurrency(totalDeposits)} icon={TrendingUp} isLoading={isLoading} />
-              <StatCard title="Funds Utilized" value={formatCurrency(totalUtilized)} icon={TrendingDown} isLoading={isLoading} />
-              <StatCard title="Remaining Balance" value={formatCurrency(balance)} icon={Wallet} isLoading={isLoading} />
-              <StatCard title="Active Personnel" value={project?.activePersonnelCount?.toString() || '0'} icon={Users} isLoading={isLoading} />
-              <StatCard title="Casual Staff" value={project?.casualPersonnelCount?.toString() || '0'} icon={HardHat} isLoading={isLoading} />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <StatCard
+                title="Total Budget"
+                value={formatCurrency(project?.budget ?? 0, { notation: 'compact', maximumFractionDigits: 2 })}
+                fullValue={formatCurrency(project?.budget ?? 0)}
+                icon={DollarSign}
+                isLoading={isLoading}
+              />
+              <StatCard
+                title="Funds Deposited"
+                value={formatCurrency(totalDeposits, { notation: 'compact', maximumFractionDigits: 2 })}
+                fullValue={formatCurrency(totalDeposits)}
+                icon={TrendingUp}
+                isLoading={isLoading}
+              />
+              <StatCard
+                title="Funds Utilized"
+                value={formatCurrency(totalUtilized, { notation: 'compact', maximumFractionDigits: 2 })}
+                fullValue={formatCurrency(totalUtilized)}
+                icon={TrendingDown}
+                isLoading={isLoading}
+              />
+              <StatCard
+                title="Remaining Balance"
+                value={formatCurrency(balance, { notation: 'compact', maximumFractionDigits: 2 })}
+                fullValue={formatCurrency(balance)}
+                icon={Wallet}
+                isLoading={isLoading}
+              />
+              <StatCard
+                title="Active Personnel"
+                value={project?.activePersonnelCount?.toString() || '0'}
+                icon={Users}
+                isLoading={isLoading}
+              />
+              <StatCard
+                title="Casual Staff"
+                value={project?.casualPersonnelCount?.toString() || '0'}
+                icon={HardHat}
+                isLoading={isLoading}
+              />
             </div>
             {/* Project Timeline Section */}
             {sortedStages.length > 0 && (
@@ -520,10 +560,10 @@ export function ClientPortalPage() {
         isOpen={viewerIndex !== null}
         onClose={() => setViewerIndex(null)}
       />
-      <ChangeOrderDetailDialog 
-        changeOrder={viewingChangeOrder} 
-        open={!!viewingChangeOrder} 
-        onOpenChange={(open) => !open && setViewingChangeOrder(null)} 
+      <ChangeOrderDetailDialog
+        changeOrder={viewingChangeOrder}
+        open={!!viewingChangeOrder}
+        onOpenChange={(open) => !open && setViewingChangeOrder(null)}
       />
     </div>
   );
