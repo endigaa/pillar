@@ -11,6 +11,7 @@ import {
   DragStartEvent
 } from '@dnd-kit/core';
 import type { Task, TaskStatus } from '@shared/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, User, GripVertical } from 'lucide-react';
@@ -67,18 +68,11 @@ function TaskCard({ task, onEdit, isOverlay = false }: { task: Task; onEdit?: (t
               </div>
             )}
           </div>
-          <div className="flex flex-wrap gap-1 mt-2">
-             {task.constructionStageName && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal">
-                  {task.constructionStageName}
-                </Badge>
-             )}
-             {task.areaName && (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-normal">
-                  {task.areaName}
-                </Badge>
-             )}
-          </div>
+          {task.constructionStageName && (
+            <Badge variant="outline" className="mt-2 text-[10px] px-1.5 py-0 h-5 font-normal">
+              {task.constructionStageName}
+            </Badge>
+          )}
         </div>
       </div>
     </div>
