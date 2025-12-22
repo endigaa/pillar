@@ -1,6 +1,6 @@
 import { IndexedEntity, Entity } from "./core-utils";
 import type { Env } from "./core-utils";
-import type { Client, Project, Expense, Deposit, ProgressPhoto, Tool, SubContractor, Supplier, Material, Task, TaskStatus, ClientDocument, CompanyProfile, Invoice, SupplierCategory, ConstructionStage, ExpenseCategory, WorkshopMaterial, WorksiteMaterialIssue, Personnel, DayOff, GeneralExpense, NextOfKin, Quote, JournalEntry, ClientFeedback, ChangeOrder, PlanStage, Workshop, GeneralIncome } from "@shared/types";
+import type { Client, Project, Expense, Deposit, ProgressPhoto, Tool, SubContractor, Supplier, Material, Task, TaskStatus, ClientDocument, CompanyProfile, Invoice, SupplierCategory, ConstructionStage, ExpenseCategory, WorkshopMaterial, WorksiteMaterialIssue, Personnel, DayOff, GeneralExpense, NextOfKin, Quote, JournalEntry, ClientFeedback, ChangeOrder, PlanStage, Workshop, GeneralIncome, ProjectArea } from "@shared/types";
 import { MOCK_CLIENTS, MOCK_PROJECTS, MOCK_SUPPLIER_CATEGORIES, MOCK_CONSTRUCTION_STAGES, MOCK_EXPENSE_CATEGORIES, MOCK_WORKSHOP_MATERIALS, MOCK_PERSONNEL, MOCK_GENERAL_EXPENSES, MOCK_WORKSHOPS, MOCK_PROJECT_TEMPLATES, MOCK_GENERAL_INCOME } from "@shared/mock-data";
 import type { ProjectTemplate } from "@shared/types";
 // COMPANY PROFILE ENTITY (Singleton)
@@ -67,9 +67,10 @@ export class ProjectEntity extends IndexedEntity<Project> {
     clientFeedback: [],
     changeOrderIds: [],
     planStages: [],
+    areas: [],
     status: 'Not Started',
   };
-  static seedData = MOCK_PROJECTS.map(p => ({ ...p, planStages: [] })); // Ensure mock data has planStages
+  static seedData = MOCK_PROJECTS.map(p => ({ ...p, planStages: [], areas: [] })); // Ensure mock data has planStages and areas
   async addExpense(expense: Omit<Expense, 'id'>): Promise<Expense> {
     const newExpense: Expense = { ...expense, id: crypto.randomUUID() };
     await this.mutate(s => ({
@@ -318,6 +319,20 @@ export class ProjectEntity extends IndexedEntity<Project> {
       planStages: (s.planStages || []).filter(st => st.id !== stageId),
     }));
   }
+  async addArea(area: Omit<ProjectArea, 'id'>): Promise<ProjectArea> {
+    const newArea: ProjectArea = { ...area, id: crypto.randomUUID() };
+    await this.mutate(s => ({
+      ...s,
+      areas: [...(s.areas || []), newArea],
+    }));
+    return newArea;
+  }
+  async deleteArea(areaId: string): Promise<void> {
+    await this.mutate(s => ({
+      ...s,
+      areas: (s.areas || []).filter(a => a.id !== areaId),
+    }));
+  }
   // Override ensureState to backfill new fields for existing projects
   protected override async ensureState(): Promise<Project> {
     const s = await super.ensureState();
@@ -329,6 +344,10 @@ export class ProjectEntity extends IndexedEntity<Project> {
     }
     if (!s.planStages) {
       updates.planStages = [];
+      modified = true;
+    }
+    if (!s.areas) {
+      updates.areas = [];
       modified = true;
     }
     if (modified) {

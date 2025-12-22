@@ -32,6 +32,7 @@ import { EditProjectForm } from '@/components/EditProjectForm';
 import { ProjectMaterials } from '@/components/ProjectMaterials';
 import { ProjectResources } from '@/components/ProjectResources';
 import { UnusedMaterialsReport } from '@/components/UnusedMaterialsReport';
+import { ProjectAreasManager } from '@/components/ProjectAreasManager';
 import { calculateProjectFinancials, calculateTotalExpense, exportToCsv } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePagination } from '@/hooks/usePagination';
@@ -214,6 +215,7 @@ export function ProjectPage() {
         'Tax ($)': (taxAmount / 100).toFixed(2),
         'Total ($)': (total / 100).toFixed(2),
         'Work Stage': exp.workStage || '',
+        'Area': exp.areaName || '',
         'Invoiced': exp.invoiced ? 'Yes' : 'No'
       };
     });
@@ -357,6 +359,8 @@ export function ProjectPage() {
                   </CardContent>
                 </Card>
               </div>
+              {/* Project Areas */}
+              <ProjectAreasManager project={project} onUpdate={fetchProjectData} />
               {/* Detailed Content */}
               <div className="grid gap-6 lg:grid-cols-5">
                 <div className="lg:col-span-3 space-y-6">
@@ -367,7 +371,7 @@ export function ProjectPage() {
                         <Button variant="outline" size="sm" onClick={handleExportExpenses}>
                           <Download className="mr-2 h-4 w-4" /> Export CSV
                         </Button>
-                        <Dialog open={isAddExpenseOpen} onOpenChange={setAddExpenseOpen}><DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" />Add Expense</Button></DialogTrigger><DialogContent className="sm:max-w-[480px]"><DialogHeader><DialogTitle>Add New Expense</DialogTitle><DialogDescription>Log a new cost against the project budget.</DialogDescription></DialogHeader><AddExpenseForm onSubmit={handleAddExpense} onFinished={() => setAddExpenseOpen(false)} /></DialogContent></Dialog>
+                        <Dialog open={isAddExpenseOpen} onOpenChange={setAddExpenseOpen}><DialogTrigger asChild><Button size="sm"><PlusCircle className="mr-2 h-4 w-4" />Add Expense</Button></DialogTrigger><DialogContent className="sm:max-w-[480px]"><DialogHeader><DialogTitle>Add New Expense</DialogTitle><DialogDescription>Log a new cost against the project budget.</DialogDescription></DialogHeader><AddExpenseForm areas={project.areas} projectId={project.id} onSubmit={handleAddExpense} onFinished={() => setAddExpenseOpen(false)} /></DialogContent></Dialog>
                       </div>
                     </CardHeader>
                     <CardContent>
@@ -386,7 +390,13 @@ export function ProjectPage() {
                             {currentExpenses.length > 0 ? (currentExpenses.map((expense: Expense) => (
                               <TableRow key={expense.id}>
                                 <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
-                                <TableCell><div>{expense.description}{expense.category === 'Materials' && expense.workStage && (<Badge variant="outline" className="ml-2">{expense.workStage}</Badge>)}</div></TableCell>
+                                <TableCell>
+                                  <div>
+                                    {expense.description}
+                                    {expense.category === 'Materials' && expense.workStage && (<Badge variant="outline" className="ml-2">{expense.workStage}</Badge>)}
+                                    {expense.areaName && (<Badge variant="secondary" className="ml-2 text-[10px]">{expense.areaName}</Badge>)}
+                                  </div>
+                                </TableCell>
                                 <TableCell><Badge variant="secondary">{expense.category}</Badge></TableCell>
                                 <TableCell className="text-right font-medium"><Tooltip><TooltipTrigger asChild><span>{formatCurrency(calculateTotalExpense(expense))}</span></TooltipTrigger><TooltipContent><div className="p-1 text-sm"><div className="flex justify-between gap-4"><span>Subtotal:</span><span>{formatCurrency(expense.amount)}</span></div>{(expense.taxes ?? []).map(tax => (<div key={tax.id} className="flex justify-between gap-4"><span>{tax.name} ({tax.rate}%):</span><span>{formatCurrency(expense.amount * (tax.rate / 100))}</span></div>))}</div></TooltipContent></Tooltip></TableCell>
                                 <TableCell className="text-right">
@@ -420,7 +430,7 @@ export function ProjectPage() {
                 </div>
                 <div className="lg:col-span-2 space-y-6">
                   <ProjectDeposits deposits={project.deposits ?? []} onAddDeposit={handleAddDeposit} />
-                  <ProjectTasks tasks={project.tasks ?? []} onAddTask={handleAddTask} onUpdateTaskStatus={handleUpdateTaskStatus} />
+                  <ProjectTasks tasks={project.tasks ?? []} areas={project.areas} projectId={project.id} onAddTask={handleAddTask} onUpdateTaskStatus={handleUpdateTaskStatus} />
                 </div>
               </div>
             </div>
@@ -487,6 +497,8 @@ export function ProjectPage() {
           {editingExpense && (
             <EditExpenseForm
               initialValues={editingExpense}
+              areas={project.areas}
+              projectId={project.id}
               onSubmit={handleUpdateExpense}
               onFinished={() => setEditingExpense(null)}
             />

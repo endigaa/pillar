@@ -3,7 +3,7 @@ import type { Env } from './core-utils';
 import { ProjectEntity, ClientEntity, ToolEntity, SubContractorEntity, SupplierEntity, MaterialEntity, CompanyProfileEntity, InvoiceEntity, SupplierCategoryEntity, ConstructionStageEntity, ExpenseCategoryEntity, WorkshopMaterialEntity, PersonnelEntity, GeneralExpenseEntity, QuoteEntity, ChangeOrderEntity, WorkshopEntity, ProjectTemplateEntity, GeneralIncomeEntity } from "./entities";
 import { createModel, createSingletonModel } from "./orm";
 import { ok, bad, notFound, isStr } from './core-utils';
-import type { Project, Expense, Client, Deposit, ProgressPhoto, Tool, SubContractor, Supplier, Material, Task, TaskStatus, ClientDocument, CompanyProfile, ImportedTransaction, Invoice, InvoiceStatus, ClientStatement, ClientStatementTransaction, ExpenseCategory, SupplierCategory, ConstructionStage, WorkshopMaterial, Personnel, DayOff, GeneralExpense, Quote, QuoteStatus, JournalEntry, ClientFeedback, ChangeOrder, ChangeOrderStatus, PlanStage, Workshop, PortalResources, WorksiteMaterialIssue, ProjectTemplate, GeneralIncome } from "@shared/types";
+import type { Project, Expense, Client, Deposit, ProgressPhoto, Tool, SubContractor, Supplier, Material, Task, TaskStatus, ClientDocument, CompanyProfile, ImportedTransaction, Invoice, InvoiceStatus, ClientStatement, ClientStatementTransaction, ExpenseCategory, SupplierCategory, ConstructionStage, WorkshopMaterial, Personnel, DayOff, GeneralExpense, Quote, QuoteStatus, JournalEntry, ClientFeedback, ChangeOrder, ChangeOrderStatus, PlanStage, Workshop, PortalResources, WorksiteMaterialIssue, ProjectTemplate, GeneralIncome, ProjectArea } from "@shared/types";
 import { MOCK_PROJECT_TEMPLATES } from "@shared/mock-data";
 // Create models from entities
 const CompanyProfileModel = createSingletonModel(CompanyProfileEntity);
@@ -112,7 +112,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, { ...project, activePersonnelCount, casualPersonnelCount });
   });
   app.post('/api/projects', async (c) => {
-    const projectData = (await c.req.json()) as Omit<Project, 'id' | 'expenses' | 'clientName' | 'status' | 'tasks' | 'photos' | 'deposits' | 'clientDocuments' | 'invoiceIds' | 'worksiteMaterials' | 'quoteIds' | 'journalEntries' | 'clientFeedback' | 'changeOrderIds' | 'planStages'>;
+    const projectData = (await c.req.json()) as Omit<Project, 'id' | 'expenses' | 'clientName' | 'status' | 'tasks' | 'photos' | 'deposits' | 'clientDocuments' | 'invoiceIds' | 'worksiteMaterials' | 'quoteIds' | 'journalEntries' | 'clientFeedback' | 'changeOrderIds' | 'planStages' | 'areas'>;
     if (!projectData.name || !projectData.clientId || !projectData.location) {
       return bad(c, 'name, clientId, and location are required');
     }
@@ -135,6 +135,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       clientFeedback: [],
       changeOrderIds: [],
       planStages: [],
+      areas: [],
       clientName: client.name,
       status: 'Not Started',
       feeType: projectData.feeType || 'Percentage',
@@ -170,6 +171,25 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { id } = c.req.param();
     const deleted = await ProjectModel.delete(c.env, id);
     if (!deleted) return notFound(c, 'Project not found');
+    return ok(c, { success: true });
+  });
+  // PROJECT AREAS
+  app.post('/api/projects/:id/areas', async (c) => {
+    const { id } = c.req.param();
+    const areaData = await c.req.json<Omit<ProjectArea, 'id'>>();
+    if (!isStr(areaData.name)) {
+      return bad(c, 'name is required');
+    }
+    const project = await ProjectModel.findInstance(c.env, id);
+    if (!project) return notFound(c, 'Project not found');
+    const newArea = await project.addArea(areaData);
+    return ok(c, newArea);
+  });
+  app.delete('/api/projects/:id/areas/:areaId', async (c) => {
+    const { id, areaId } = c.req.param();
+    const project = await ProjectModel.findInstance(c.env, id);
+    if (!project) return notFound(c, 'Project not found');
+    await project.deleteArea(areaId);
     return ok(c, { success: true });
   });
   // PLAN STAGES
@@ -1105,7 +1125,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   });
   app.post('/api/projects/:id/issue-material', async (c) => {
     const { id } = c.req.param();
-    const { workshopMaterialId, quantity, isBillable } = await c.req.json<{ workshopMaterialId: string; quantity: number; isBillable?: boolean }>();
+    const { workshopMaterialId, quantity, isBillable, areaId, areaName } = await c.req.json<{ workshopMaterialId: string; quantity: number; isBillable?: boolean; areaId?: string; areaName?: string }>();
     if (!isStr(workshopMaterialId) || typeof quantity !== 'number' || quantity <= 0) {
       return bad(c, 'Valid workshopMaterialId and a positive quantity are required.');
     }
@@ -1134,7 +1154,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       isBillable: !!isBillable,
       invoiced: false,
       unusedQuantity: 0,
-      imageUrl: materialState.imageUrl // Add this
+      imageUrl: materialState.imageUrl,
+      areaId,
+      areaName
     });
     return ok(c, issue);
   });

@@ -8,6 +8,10 @@ export interface Tax {
   name: string;
   rate: number; // percentage, e.g., 7.5 for 7.5%
 }
+export interface ProjectArea {
+  id: string;
+  name: string;
+}
 export interface Expense {
   id: string;
   description: string;
@@ -21,6 +25,8 @@ export interface Expense {
   quantity?: number;
   unit?: string;
   unusedQuantity?: number;
+  areaId?: string;
+  areaName?: string;
 }
 export interface GeneralExpense {
   id: string;
@@ -72,6 +78,8 @@ export interface Task {
   constructionStageId?: string;
   constructionStageName?: string;
   createdAt?: string; // ISO 8601
+  areaId?: string;
+  areaName?: string;
 }
 export interface ClientDocument {
   id: string;
@@ -92,6 +100,8 @@ export interface WorksiteMaterialIssue {
   invoiced?: boolean;
   unusedQuantity?: number;
   imageUrl?: string;
+  areaId?: string;
+  areaName?: string;
 }
 export type QuoteStatus = 'Pending' | 'Approved' | 'Rejected';
 export interface QuoteItem {
@@ -183,6 +193,7 @@ export interface Project {
   clientFeedback: ClientFeedback[];
   changeOrderIds?: string[];
   planStages: PlanStage[];
+  areas: ProjectArea[];
   status: 'Not Started' | 'In Progress' | 'Completed' | 'On Hold';
   activePersonnelCount?: number;
   casualPersonnelCount?: number;
