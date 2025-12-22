@@ -43,6 +43,7 @@ export const MOCK_PROJECTS: Project[] = [
     clientFeedback: [],
     changeOrderIds: [],
     planStages: [],
+    areas: [],
     status: 'In Progress',
   },
   {
@@ -69,6 +70,7 @@ export const MOCK_PROJECTS: Project[] = [
     clientFeedback: [],
     changeOrderIds: [],
     planStages: [],
+    areas: [],
     status: 'In Progress',
   },
   {
@@ -95,6 +97,7 @@ export const MOCK_PROJECTS: Project[] = [
     clientFeedback: [],
     changeOrderIds: [],
     planStages: [],
+    areas: [],
     status: 'Not Started',
   },
 ];

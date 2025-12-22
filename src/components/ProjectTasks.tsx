@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { PlusCircle, Eye, EyeOff, User, Wrench, Truck, HardHat, Pencil, Trash2, LayoutGrid, List } from 'lucide-react';
 import { AddTaskForm } from './AddTaskForm';
 import { EditTaskForm } from './EditTaskForm';
-import type { Task, TaskStatus, ResourceType } from '@shared/types';
+import type { Task, TaskStatus, ResourceType, ProjectArea } from '@shared/types';
 import { Checkbox } from './ui/checkbox';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -16,10 +16,11 @@ import { toast } from 'sonner';
 import { ProjectTaskBoard } from './ProjectTaskBoard';
 interface ProjectTasksProps {
   tasks: Task[];
+  areas?: ProjectArea[];
   onAddTask: (values: Omit<Task, 'id' | 'status'>) => Promise<void>;
   onUpdateTaskStatus: (taskId: string, status: TaskStatus) => Promise<void>;
 }
-export function ProjectTasks({ tasks = [], onAddTask, onUpdateTaskStatus }: ProjectTasksProps) {
+export function ProjectTasks({ tasks = [], areas = [], onAddTask, onUpdateTaskStatus }: ProjectTasksProps) {
   const { id: projectId } = useParams<{ id: string }>();
   const [isAddTaskOpen, setAddTaskOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -110,7 +111,7 @@ export function ProjectTasks({ tasks = [], onAddTask, onUpdateTaskStatus }: Proj
                 <DialogTitle>Add New Task</DialogTitle>
                 <DialogDescription>Describe the task and set a due date. You can also assign resources.</DialogDescription>
               </DialogHeader>
-              <AddTaskForm onSubmit={onAddTask} onFinished={() => setAddTaskOpen(false)} />
+              <AddTaskForm onSubmit={onAddTask} onFinished={() => setAddTaskOpen(false)} areas={areas} />
             </DialogContent>
           </Dialog>
         </div>
@@ -125,6 +126,7 @@ export function ProjectTasks({ tasks = [], onAddTask, onUpdateTaskStatus }: Proj
                 initialValues={editingTask}
                 onSubmit={handleUpdateTask}
                 onFinished={() => setEditingTask(null)}
+                areas={areas}
               />
             )}
           </DialogContent>
@@ -165,6 +167,11 @@ export function ProjectTasks({ tasks = [], onAddTask, onUpdateTaskStatus }: Proj
                             {task.constructionStageName && (
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal">
                                 {task.constructionStageName}
+                              </Badge>
+                            )}
+                            {task.areaName && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-normal">
+                                {task.areaName}
                               </Badge>
                             )}
                           </div>

@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import type { Expense, ExpenseCategory, Personnel, ConstructionStage } from '@shared/types';
+import type { Expense, ExpenseCategory, Personnel, ConstructionStage, ProjectArea } from '@shared/types';
 import { Separator } from './ui/separator';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -53,21 +53,26 @@ const expenseFormSchema = z.object({
   personnelId: z.string().optional(),
   quantity: z.number().min(0).optional(),
   unit: z.string().optional(),
+  areaId: z.string().optional(),
 });
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 interface EditExpenseFormProps {
   initialValues: Expense;
   onSubmit: (values: Omit<Expense, 'id'>) => Promise<void>;
   onFinished: () => void;
+  areas?: ProjectArea[];
+  projectId?: string;
 }
-export function EditExpenseForm({ initialValues, onSubmit, onFinished }: EditExpenseFormProps) {
+export function EditExpenseForm({ initialValues, onSubmit, onFinished, areas = [], projectId }: EditExpenseFormProps) {
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [stages, setStages] = useState<ConstructionStage[]>([]);
+  const [localAreas, setLocalAreas] = useState<ProjectArea[]>(areas);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewCategoryOpen, setIsNewCategoryOpen] = useState(false);
   const [isNewPersonnelOpen, setIsNewPersonnelOpen] = useState(false);
   const [isNewStageOpen, setIsNewStageOpen] = useState(false);
+  const [isNewAreaOpen, setIsNewAreaOpen] = useState(false);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -87,6 +92,10 @@ export function EditExpenseForm({ initialValues, onSubmit, onFinished }: EditExp
     };
     fetchData();
   }, []);
+  // Sync local areas if props change
+  useEffect(() => {
+    setLocalAreas(areas);
+  }, [areas]);
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
@@ -99,6 +108,7 @@ export function EditExpenseForm({ initialValues, onSubmit, onFinished }: EditExp
       personnelId: initialValues.personnelId || '',
       quantity: initialValues.quantity || 0,
       unit: initialValues.unit || '',
+      areaId: initialValues.areaId || '',
     },
   });
   const { fields, append, remove } = useFieldArray({
@@ -108,6 +118,7 @@ export function EditExpenseForm({ initialValues, onSubmit, onFinished }: EditExp
   const category = form.watch('category');
   const { isSubmitting } = form.formState;
   const handleFormSubmit = async (values: ExpenseFormValues) => {
+    const selectedArea = localAreas.find(a => a.id === values.areaId);
     const expenseData = {
       ...values,
       amount: Math.round(values.amount * 100), // Convert to cents
@@ -119,6 +130,8 @@ export function EditExpenseForm({ initialValues, onSubmit, onFinished }: EditExp
       unit: values.category === 'Materials' ? values.unit : undefined,
       unusedQuantity: initialValues.unusedQuantity, // Preserve existing unused quantity
       invoiced: initialValues.invoiced, // Preserve invoiced status
+      areaId: values.areaId || undefined,
+      areaName: selectedArea?.name,
     };
     await onSubmit(expenseData);
     onFinished();
@@ -163,6 +176,24 @@ export function EditExpenseForm({ initialValues, onSubmit, onFinished }: EditExp
       toast.success('Stage created and selected!');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create stage.');
+    }
+  };
+  const handleCreateArea = async (name: string) => {
+    if (!projectId) {
+      toast.error('Project ID missing, cannot create area.');
+      return;
+    }
+    try {
+      const newArea = await api<ProjectArea>(`/api/projects/${projectId}/areas`, {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      });
+      setLocalAreas(prev => [...prev, newArea]);
+      form.setValue('areaId', newArea.id);
+      setIsNewAreaOpen(false);
+      toast.success('Area created and selected!');
+    } catch (err) {
+      toast.error('Failed to create area.');
     }
   };
   return (
@@ -294,6 +325,41 @@ export function EditExpenseForm({ initialValues, onSubmit, onFinished }: EditExp
               />
             </>
           )}
+          <FormField
+            control={form.control}
+            name="areaId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Project Area (Optional)</FormLabel>
+                <div className="flex gap-2">
+                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoading}>
+                    <FormControl>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select area (e.g. Kitchen)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {localAreas.map((area) => (
+                        <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {projectId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setIsNewAreaOpen(true)}
+                      title="Add New Area"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField control={form.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date of Expense</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('w-full pl-3 text-left font-normal',!field.value && 'text-muted-foreground')}>{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date('1900-01-01')} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
           <FormField
             control={form.control}
@@ -403,6 +469,20 @@ export function EditExpenseForm({ initialValues, onSubmit, onFinished }: EditExp
             onCancel={() => setIsNewStageOpen(false)}
             label="Stage Name"
             placeholder="e.g., Demolition"
+          />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isNewAreaOpen} onOpenChange={setIsNewAreaOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Add Project Area</DialogTitle>
+            <DialogDescription>Create a new zone for tracking costs.</DialogDescription>
+          </DialogHeader>
+          <SimpleCategoryForm
+            onSubmit={handleCreateArea}
+            onCancel={() => setIsNewAreaOpen(false)}
+            label="Area Name"
+            placeholder="e.g., Master Bedroom"
           />
         </DialogContent>
       </Dialog>

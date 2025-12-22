@@ -101,6 +101,7 @@ export function NewProjectForm({ onSubmit, onFinished }: NewProjectFormProps) {
       startDate: values.startDate.toISOString(),
       endDate: values.endDate.toISOString(),
       gpsCoordinates: gpsLat && gpsLon ? { lat: gpsLat, lon: gpsLon } : undefined,
+      areas: [], // Initialize empty areas array
     };
     await onSubmit(projectData);
     onFinished();
@@ -157,10 +158,10 @@ export function NewProjectForm({ onSubmit, onFinished }: NewProjectFormProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
                     onClick={() => setIsNewClientOpen(true)}
                     title="Add New Client"
                   >

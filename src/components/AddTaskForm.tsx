@@ -18,7 +18,7 @@ import { CalendarIcon, Loader2, PlusCircle } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import type { Task, SubContractor, Supplier, Personnel, Tool, ResourceType, ConstructionStage } from '@shared/types';
+import type { Task, SubContractor, Supplier, Personnel, Tool, ResourceType, ConstructionStage, ProjectArea } from '@shared/types';
 import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { api } from '@/lib/api-client';
@@ -38,13 +38,15 @@ const taskFormSchema = z.object({
   assigneeId: z.string().optional(),
   isAssigneePublic: z.boolean().optional(),
   constructionStageId: z.string().optional(),
+  areaId: z.string().optional(),
 });
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 interface AddTaskFormProps {
   onSubmit: (values: Omit<Task, 'id' | 'status'>) => Promise<void>;
   onFinished: () => void;
+  areas?: ProjectArea[];
 }
-export function AddTaskForm({ onSubmit, onFinished }: AddTaskFormProps) {
+export function AddTaskForm({ onSubmit, onFinished, areas = [] }: AddTaskFormProps) {
   const [subContractors, setSubContractors] = useState<SubContractor[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
@@ -62,6 +64,7 @@ export function AddTaskForm({ onSubmit, onFinished }: AddTaskFormProps) {
       isPublic: false,
       isAssigneePublic: false,
       constructionStageId: '',
+      areaId: '',
     },
   });
   const assigneeType = form.watch('assigneeType');
@@ -95,6 +98,7 @@ export function AddTaskForm({ onSubmit, onFinished }: AddTaskFormProps) {
   }, [assigneeType, form]);
   const { isSubmitting } = form.formState;
   const handleFormSubmit = async (values: TaskFormValues) => {
+    const selectedArea = areas.find(a => a.id === values.areaId);
     const taskData = {
       ...values,
       dueDate: values.dueDate.toISOString(),
@@ -102,6 +106,8 @@ export function AddTaskForm({ onSubmit, onFinished }: AddTaskFormProps) {
       assigneeId: values.assigneeType ? values.assigneeId : undefined,
       isAssigneePublic: values.assigneeType ? values.isAssigneePublic : false,
       constructionStageId: values.constructionStageId || undefined,
+      areaId: values.areaId || undefined,
+      areaName: selectedArea?.name,
     };
     await onSubmit(taskData);
     onFinished();
@@ -217,39 +223,63 @@ export function AddTaskForm({ onSubmit, onFinished }: AddTaskFormProps) {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="constructionStageId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Construction Stage (Optional)</FormLabel>
-                <div className="flex gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="constructionStageId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Construction Stage (Optional)</FormLabel>
+                  <div className="flex gap-2">
+                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoadingResources}>
+                      <FormControl>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder={isLoadingResources ? "Loading..." : "Select a stage"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {stages.map(stage => (
+                          <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setIsNewStageOpen(true)}
+                      title="Add New Stage"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="areaId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Area (Optional)</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoadingResources}>
                     <FormControl>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder={isLoadingResources ? "Loading..." : "Select a stage"} />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select area" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {stages.map(stage => (
-                        <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
+                      {areas.map(area => (
+                        <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setIsNewStageOpen(true)}
-                    title="Add New Stage"
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                  </Button>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}

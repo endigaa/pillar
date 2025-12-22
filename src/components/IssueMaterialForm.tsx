@@ -23,23 +23,26 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
 import { api } from '@/lib/api-client';
-import type { WorkshopMaterial } from '@shared/types';
+import type { WorkshopMaterial, ProjectArea } from '@shared/types';
 import { toast } from 'sonner';
 const issueMaterialSchema = z.object({
   workshopMaterialId: z.string().min(1, { message: 'Please select a material.' }),
   quantity: z.number().min(1, { message: 'Quantity must be at least 1.' }),
   isBillable: z.boolean(),
+  areaId: z.string().optional(),
 });
 interface IssueMaterialFormValues {
   workshopMaterialId: string;
   quantity: number;
   isBillable: boolean;
+  areaId?: string;
 }
 interface IssueMaterialFormProps {
   projectId: string;
   onFinished: () => void;
+  areas?: ProjectArea[];
 }
-export function IssueMaterialForm({ projectId, onFinished }: IssueMaterialFormProps) {
+export function IssueMaterialForm({ projectId, onFinished, areas = [] }: IssueMaterialFormProps) {
   const [materials, setMaterials] = useState<WorkshopMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const form = useForm<IssueMaterialFormValues>({
@@ -48,6 +51,7 @@ export function IssueMaterialForm({ projectId, onFinished }: IssueMaterialFormPr
       workshopMaterialId: '',
       quantity: 1,
       isBillable: false,
+      areaId: '',
     },
   });
   const selectedMaterialId = form.watch('workshopMaterialId');
@@ -72,10 +76,15 @@ export function IssueMaterialForm({ projectId, onFinished }: IssueMaterialFormPr
         form.setError('quantity', { message: `Only ${selectedMaterial.quantity} available.` });
         return;
     }
+    const selectedArea = areas.find(a => a.id === values.areaId);
     try {
       await api(`/api/projects/${projectId}/issue-material`, {
         method: 'POST',
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+            ...values,
+            areaId: values.areaId || undefined,
+            areaName: selectedArea?.name,
+        }),
       });
       toast.success('Material issued successfully!');
       onFinished();
@@ -110,29 +119,53 @@ export function IssueMaterialForm({ projectId, onFinished }: IssueMaterialFormPr
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="quantity"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Quantity to Issue</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  placeholder="1"
-                  {...field}
-                  onChange={e => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                />
-              </FormControl>
-              {selectedMaterial && (
-                <FormDescription>
-                  Available: {selectedMaterial.quantity} {selectedMaterial.unit}
-                </FormDescription>
-              )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+            <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Quantity to Issue</FormLabel>
+                <FormControl>
+                    <Input
+                    type="number"
+                    placeholder="1"
+                    {...field}
+                    onChange={e => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                    />
+                </FormControl>
+                {selectedMaterial && (
+                    <FormDescription>
+                    Available: {selectedMaterial.quantity} {selectedMaterial.unit}
+                    </FormDescription>
+                )}
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+                control={form.control}
+                name="areaId"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Project Area (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoading}>
+                    <FormControl>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Select area" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {areas.map(area => (
+                        <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
         <FormField
           control={form.control}
           name="isBillable"
